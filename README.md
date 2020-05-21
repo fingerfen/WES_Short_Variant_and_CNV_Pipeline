@@ -29,11 +29,11 @@ Bioinformatics pipeline on Conda Virtual Environment for Short Variant (WES) and
 - **.bed**
   * File that stores CNV discovery results from your desired method (SNPs array, WGS, WES)
   * SHOULD ALREADY BE FILTERED
-  * Columns should be: ` chr, start, end, WES from U. Washington file ID`
+  * Columns should be: ` chr, start, end, ID`
 - **.sqlite** 
   * A database file that has a table named `id_table` in it already
   * The table is user generated
-  * Columns of the `id_table` should be: `ID, Heart_Phenotype`
+  * Columns of the `id_table` should be: `ID, cases_controls`
   * ID is the sample id
   * Heart_Phenotype is either 0 or 1 (int). 0 is controlled group, 1 is cases group
   * This table will get accessed to separate the Controlled from Cases group
