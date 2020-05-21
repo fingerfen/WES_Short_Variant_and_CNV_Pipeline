@@ -1,0 +1,92 @@
+<head>
+  <link rel="stylesheet" href="http://cdn.datatables.net/1.10.20/css/jquery.dataTables.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js"></script>
+  <script>
+    $(document).ready( function () {
+      $('table.display').DataTable();
+    } );
+  </script>
+</head>
+<h1>this is a sample specific page</h1>
+<h2>This page is specific for sample {{ id }}</h2>
+
+<!-- 
+<div>
+{{ some_variable }}
+</div>
+
+ 
+<div>
+{% for i in bob %}
+    {{ i }}
+{% endfor %}
+</div>
+-->
+
+<br>
+<br>
+<body>
+<h2>Whole Exome Sequencing Mutation Information</h2>
+<div>
+<table border="1" class="display">
+  <thead>
+    <tr style="text-align: right;">
+      <th>CHR</th>
+      <th>POS</th>
+      <th>ID</th>
+      <th>REF</th>
+      <th>ALT</th>
+      <th>QUAL</th>
+      <th>FILTER</th>
+<!--     
+ <th>INFO</th>
+      <th>FORMAT</th>
+-->
+    </tr>
+  </thead>
+  <tbody align=center >
+    {% for i in short_variant_of_id %}
+    <tr>
+      <td> {{ i[0] }} </td>
+      <td> {{ i[1] }} </td>
+      <td> {{ i[2] }} </td>
+      <td> {{ i[3] }} </td>
+      <td> {{ i[4] }} </td>
+      <td> {{ i[5] }} </td>
+      <td> {{ i[6] }} </td>
+<!--
+      <td> {{ i[7] }} </td>
+      <td> {{ i[8] }} </td>
+-->
+   </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+
+<br>
+<br>
+<h2>Copy Number Variation Information</h2>
+
+<div>
+<table border="1" class="display">
+  <thead>
+    <tr style="text-align: right;">
+      <th>CHR</th>
+      <th>START</th>
+      <th>END</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for b in CNV_of_id %}
+    <tr>
+      <th> {{ b[0] }} </th>
+      <th> {{ b[1] }} </th>
+      <th> {{ b[2] }} </th>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>

@@ -1,0 +1,28 @@
+samples:
+  bevCombind:
+
+
+vcf_path: data/
+
+vcf_ext: .vcf
+
+bed_file: data/bevCombind_cnv.bed
+
+references: data/ref-data/human_g1k_v37.fasta
+
+database: data/endpoints/new.sqlite
+
+lua: data/ref-data/rare_disease.lua
+
+temppath: data/ref-data/
+
+fai: data/ref-data/genome.fa.fai
+
+chromosome_file_path: data/ref-data/
+
+endpoints_folder: data/endpoints/
+
+scripts: src/scripts/
+
+
+size_cutoff: 1000

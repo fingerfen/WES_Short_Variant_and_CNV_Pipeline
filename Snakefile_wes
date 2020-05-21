@@ -1,0 +1,433 @@
+configfile : "config.yaml"
+
+#Nhat Duong
+#August 20th 2019
+#WES pipeline for going from variant file
+
+
+# ALL_FILES = expand("data/interim/{sample}_gene2gene_res.txt", sample=config["samples"])
+# ALL_GO = expand("data/interim/{sample}_GO_term_res.txt", sample=config["samples"])
+# ALL_MP = expand("data/interim/{sample}_MP_term_res.txt", sample=config["samples"])
+# ALL_AFFY_GENES = expand("data/interim/{sample}_Affy_gene2gene_res.txt", sample=config["samples"])
+# ALL_AFFY_GO = expand("data/interim/{sample}_Affy_GO_term_res.txt", sample=config["samples"])
+# ALL_AFFY_MP = expand("data/interim/{sample}_Affy_MP_term_res.txt", sample=config["samples"])
+ALL_REPORT = expand("data/interim/{sample}_instruction_for_REPORT.txt", sample=config["samples"])
+
+
+rule all:
+	input:
+		ALL_REPORT
+
+
+rule decomp:
+	input:
+		str(config["vcf_path"]) + "{sample}" + str(config["vcf_ext"])
+	output:
+		"data/interim/{sample}.vcfdecom.vcf"
+	threads: 1
+	params:
+		mem=r"4G"
+	shell:
+		"vt decompose {input} -o {output}"
+		
+
+
+rule normalizem:
+	input:
+		decomp = "data/interim/{sample}.vcfdecom.vcf",
+		fa=lambda wildcards: config["references"]
+	output:
+		"data/interim/{sample}.vcf.decom_norm.vcf"
+	threads: 1
+	params:
+		mem=r"4G"
+	shell:
+		"vt normalize {input.decomp} -o {output} -r {input.fa}"
+		
+
+rule annotation1:
+	input:
+		lua = lambda wildcards: config["lua"],
+		tempanno = str(config["temppath"]) + "temp.anno",
+		norm = "data/interim/{sample}.vcf.decom_norm.vcf"
+	output:
+		"data/interim/{sample}.vcf.anno.vcf"
+	threads: 1
+	params:
+		mem=r"4G"
+	shell:
+		"vcfanno -p 12 -lua {input.lua} {input.tempanno} {input.norm} > {output}"
+
+
+rule annotation2:
+	input:
+		temp2anno = str(config["temppath"]) + "temp2.anno",
+		anno1 = "data/interim/{sample}.vcf.anno.vcf"
+	output:
+		"data/interim/{sample}.vcf.anno2.vcf"
+	threads: 1
+	params:
+		mem=r"4G"
+	shell:
+		"vcfanno -p 12 {input.temp2anno} {input.anno1} > {output}"
+
+rule annotation3:
+	input:
+		temp3anno = str(config["temppath"]) + "temp3.anno",
+		anno2 = "data/interim/{sample}.vcf.anno2.vcf"
+	output:
+		"data/interim/{sample}.vcf.anno3.vcf"
+	threads: 1
+	params:
+		mem=r"4G"
+	shell:
+		"vcfanno -p 12 {input.temp3anno} {input.anno2} > {output}"
+
+
+# Add snp EFFECTS into the vcf file - annotation
+rule snpeff:
+	input:
+		anno3 = "data/interim/{sample}.vcf.anno3.vcf"
+	output:
+		"data/interim/{sample}.vcf.anno.g.vcf"
+	threads: 1
+	params:
+		mem=r"4G"
+	shell:
+		"java -Xmx2g -jar /opt/anaconda3/envs/snakemake/share/snpeff-4.3.1t-3/snpEff.jar -v hg19kg {input.anno3} > {output}"
+
+
+rule filter_results:
+	input:
+		gvcf = "data/interim/{sample}.vcf.anno.g.vcf",
+		script = str(config["scripts"]) + "filter_combined_GATK.py"
+	output:
+		gatk_DP_AD = "data/interim/gatk_filtered_DP_AD_{sample}.vcf"
+	threads: 1
+	params:
+		mem=r"4G"
+	shell:
+		"python3 {input.script} {input.gvcf} > {output.gatk_DP_AD}"
+
+rule getSNPs:
+	input:
+		#gatk_DP_AD = "data/interim/{sample}.vcf.anno.g.vcf",
+		#gatk_DP_AD = "data/interim/gatk_filtered_DP_AD.vcf",
+		gatk_DP_AD = "data/interim/gatk_filtered_DP_AD_{sample}.vcf",
+		fa=lambda wildcards: config["references"],
+	output:
+		snp_out = "data/interim/gatk_filtered_DP_AD_{sample}_raw_snps.vcf",
+		indel_out = "data/interim/gatk_filtered_DP_AD_{sample}_raw_indels.vcf"
+	threads: 1
+	params:
+		mem=r"4G"
+	shell:
+		"gatk SelectVariants -R {input.fa} -V {input.gatk_DP_AD} -select-type SNP -O {output.snp_out} &&"
+		"gatk SelectVariants -R {input.fa} -V {input.gatk_DP_AD} -select-type INDEL -O {output.indel_out}"
+
+
+rule filterSNPs:
+	input:
+		raw_snps = "data/interim/gatk_filtered_DP_AD_{sample}_raw_snps.vcf",
+		raw_indels = "data/interim/gatk_filtered_DP_AD_{sample}_raw_indels.vcf",
+		fa=lambda wildcards: config["references"]
+	output:
+		filtered_snps = "data/interim/gatk_filtered_DP_AD_{sample}_PASS_annotated_snps.vcf",
+		filtered_indels = "data/interim/gatk_filtered_DP_AD_{sample}_PASS_annotated_indels.vcf"
+	threads: 1
+	params:
+		mem=r"4G"
+	shell:
+		"""gatk VariantFiltration -R {input.fa} -V {input.raw_snps} -O {output.filtered_snps} """
+		"""--filter-expression "QD < 2.0" --filter-name "QD_less_than_2" """
+		"""--filter-expression "FS > 60.0" --filter-name "FS_larger_than_60" """
+		"""--filter-expression "MQ < 40.0" --filter-name "MQ_less_than_40" """
+		"""--filter-expression "MQRankSum < -12.5" --filter-name "MQranksum_less_than_-12.5" """
+		"""--filter-expression "ReadPosRankSum < -8.0" --filter-name "readposranksum_less_than_-8" && """
+		"""gatk VariantFiltration -R {input.fa} -V {input.raw_indels} -O {output.filtered_indels} """
+		"""--filter-expression "QD < 2.0" --filter-name "QD_less_than_2" """
+		"""--filter-expression "FS > 200.0" --filter-name "FS_larger_than_200" """
+		"""--filter-expression "ReadPosRankSum < -20.0" --filter-name "readposranksum_less_than_-20" """
+
+# rule filterPASS_exac:
+# 	input:
+# 		filtered_snps = "data/interim/gatk_filtered_DP_AD_{sample}_PASS_annotated_snps.vcf",
+# 		filtered_indels = "data/interim/gatk_filtered_DP_AD_{sample}_PASS_annotated_indels.vcf"
+# 	output:
+# 		fin_snps_fil = "data/interim/gatk_filtered_DP_AD_{sample}_snps_PASS_exac.vcf",
+# 		fin_indels_fil = "data/interim/gatk_filtered_DP_AD_{sample}_indels_PASS_exac.vcf"
+# 	threads: 1
+# 	params:
+# 		mem=r"4G"
+# 	shell:
+# 	# We first get all the lines with PASS
+# 	# then we take the header line that starts with #CHROM and any exac_ac_all <100,000
+# 		"""awk '$7~/PASS/||/^#CHROM/' {input.filtered_snps} """
+# 		"""| egrep '^#CHROM|exac_ac_all=[0-9]$|exac_ac_all=[0-9];"""
+# 		"""|exac_ac_all=[0-9][0-9]$|exac_ac_all=[0-9][0-9];"""
+# 		"""|exac_ac_all=[0-9][0-9][0-9]$|exac_ac_all=[0-9][0-9][0-9];"""
+# 		"""|exac_ac_all=[0-9][0-9][0-9][0-9]$|exac_ac_all=[0-9][0-9][0-9][0-9];"""
+# 		"""|exac_ac_all=[0-9][0-9][0-9][0-9][0-9]$|exac_ac_all=[0-9][0-9][0-9][0-9][0-9];' """
+# 		"""> {output.fin_snps_fil} && """
+# 		"""awk '$7~/PASS/||/^#CHROM/' {input.filtered_indels} """
+# 		"""| egrep '^#CHROM|exac_ac_all=[0-9]$|exac_ac_all=[0-9];"""
+# 		"""|exac_ac_all=[0-9][0-9]$|exac_ac_all=[0-9][0-9];"""
+# 		"""|exac_ac_all=[0-9][0-9][0-9]$|exac_ac_all=[0-9][0-9][0-9];"""
+# 		"""|exac_ac_all=[0-9][0-9][0-9][0-9]$|exac_ac_all=[0-9][0-9][0-9][0-9];"""
+# 		"""|exac_ac_all=[0-9][0-9][0-9][0-9][0-9]$|exac_ac_all=[0-9][0-9][0-9][0-9][0-9];' """
+# 		"""> {output.fin_indels_fil} """
+
+rule gen_PASS_high_moderate:
+	input:
+		filtered_snps = "data/interim/gatk_filtered_DP_AD_{sample}_PASS_annotated_snps.vcf",
+		filtered_indels = "data/interim/gatk_filtered_DP_AD_{sample}_PASS_annotated_indels.vcf"
+	output:
+		pass_high_moderate = "data/interim/gatk_filtered_DP_AD_{sample}_PASS_high_moderate.vcf"
+	threads: 1
+	params:
+		mem=r"4G"
+	shell:
+		'''awk '$7~/PASS/||/^#CHROM/' {input.filtered_snps} | grep 'HIGH\|MODERATE\|^#CHROM' > {output.pass_high_moderate} && '''
+		'''awk '$7~/PASS/' {input.filtered_indels} | grep 'HIGH\|MODERATE' >> {output.pass_high_moderate}'''
+
+
+
+# rule gen_high_moderate:
+# 	input:
+# 		gatk_DP_AD = "data/interim/gatk_filtered_DP_AD_{sample}.vcf"
+# 		pass_high_moderate = "data/interim/gatk_filtered_DP_AD_{sample}_PASS_high_moderate.vcf"
+# 	output:
+# 		high_moderate = "data/interim/gatk_filtered_DP_AD_{sample}_high_moderate.vcf",
+# 		non_high_moderate = "data/interim/gatk_filtered_DP_AD_{sample}_non_high_moderate.vcf"
+# 	threads: 1
+# 	params:
+# 		mem=r"4G"
+# 	shell:
+# 		""" grep 'HIGH\|MODERATE\|^#CHROM' {input.gatk_DP_AD} > {output.high_moderate} && """
+# 		""" grep -v 'HIGH\|MODERATE\|^##' {input.gatk_DP_AD} > {output.non_high_moderate} """
+
+
+rule gene_WES_mutation_matrix:
+	input:
+		script = str(config["scripts"]) + "1000_filter_mutation_matrix.py",
+		pass_high_moderate = "data/interim/gatk_filtered_DP_AD_{sample}_PASS_high_moderate.vcf"
+		#pass_high_moderate = "data/interim/gatk_filtered_DP_AD_{sample}_high_moderate.vcf"
+	output:
+		WES_mat = "data/interim/{sample}_WES_mutation_matrix.txt"
+	threads: 1
+	params:
+		mem=r"4G",
+		database = lambda wildcards: config["database"]
+	shell:
+		"python3 {input.script} --input {input.pass_high_moderate} --database {params.database} > {output.WES_mat}"
+
+
+
+rule gene2gene_analysis:
+	input:
+		script = str(config["scripts"]) + "stat_test_LOF_gene_pval.py",
+		gene_list = str(config["chromosome_file_path"]) + "hg19_genes.bed",
+		WES_mat = "data/interim/{sample}_WES_mutation_matrix.txt"
+	output:
+		gene2gene = "data/interim/{sample}_gene2gene_res.txt"
+	threads: 1
+	params:
+		mem=r"4G",
+		database = lambda wildcards: config["database"]
+	shell:
+		"python3 {input.script} --database {params.database} --genelist {input.gene_list} > {output.gene2gene}"
+
+rule GO_term_analysis:
+	input:
+		script = str(config["scripts"]) + "stat_test_LOF_GO_term_pval.py",
+		gene_list = str(config["chromosome_file_path"]) + "hg19_genes.bed",
+		go_terms = str(config["chromosome_file_path"]) + "human_GO.txt",
+		go_functions = str(config["chromosome_file_path"]) + "go_def.txt",
+		WES_mat = "data/interim/{sample}_WES_mutation_matrix.txt"
+	output:
+		go_res = "data/interim/{sample}_GO_term_res.txt"
+	threads: 1
+	params:
+		mem=r"4G",
+		database = lambda wildcards: config["database"]
+	shell:
+		"python3 {input.script} --database {params.database} --genelist {input.gene_list} --goterms {input.go_terms} --gofunctions {input.go_functions} > {output.go_res}"
+
+rule MP_term_analysis:
+	input:
+		script = str(config["scripts"]) + "stat_test_LOF_MP_term_pval.py",
+		gene_list = str(config["chromosome_file_path"]) + "hg19_genes.bed",
+		mp_terms = str(config["chromosome_file_path"]) + "human_MP_ws.txt",
+		mp_functions = str(config["chromosome_file_path"]) + "mp_def.txt",
+		WES_mat = "data/interim/{sample}_WES_mutation_matrix.txt"
+	output:
+		mp_res = "data/interim/{sample}_MP_term_res.txt"
+	threads: 1
+	params:
+		mem=r"4G",
+		database = lambda wildcards: config["database"]
+	shell:
+		"python3 {input.script} --database {params.database} --genelist {input.gene_list} --mpterms {input.mp_terms} --mpfunctions {input.mp_functions} > {output.mp_res}"
+
+
+
+rule affy_gene2gene_analysis:
+	input:
+		script = str(config["scripts"]) + "stat_test_LOF_Affy_gene_pval.py",
+		gene_list = str(config["chromosome_file_path"]) + "hg19_genes.bed",
+		bed = lambda wildcards: config["bed_file"],
+		#WES_mat = "data/interim/{sample}_WES_mutation_matrix.txt"
+	output:
+		gene2gene = "data/interim/{sample}_Affy_gene2gene_res.txt"
+	threads: 1
+	params:
+		mem=r"4G",
+		database = lambda wildcards: config["database"]
+	shell:
+		"python3 {input.script} --database {params.database} --genelist {input.gene_list} --bed_file {input.bed} > {output.gene2gene}"
+
+rule affy_GO_term_analysis:
+	input:
+		script = str(config["scripts"]) + "stat_test_LOF_Affy_GO_term_pval.py",
+		gene_list = str(config["chromosome_file_path"]) + "hg19_genes.bed",
+		go_terms = str(config["chromosome_file_path"]) + "human_GO.txt",
+		go_functions = str(config["chromosome_file_path"]) + "go_def.txt",
+		bed = lambda wildcards: config["bed_file"],
+		#WES_mat = "data/interim/{sample}_WES_mutation_matrix.txt"
+	output:
+		go_res = "data/interim/{sample}_Affy_GO_term_res.txt"
+	threads: 1
+	params:
+		mem=r"4G",
+		database = lambda wildcards: config["database"]
+	shell:
+		"python3 {input.script} --database {params.database} --genelist {input.gene_list} --goterms {input.go_terms} --gofunctions {input.go_functions} --bed_file {input.bed}> {output.go_res}"
+
+
+rule affy_MP_term_analysis:
+	input:
+		script = str(config["scripts"]) + "stat_test_LOF_Affy_MP_term_pval.py",
+		gene_list = str(config["chromosome_file_path"]) + "hg19_genes.bed",
+		mp_terms = str(config["chromosome_file_path"]) + "human_MP_ws.txt",
+		mp_functions = str(config["chromosome_file_path"]) + "mp_def.txt",
+		bed = lambda wildcards: config["bed_file"],
+		#WES_mat = "data/interim/{sample}_WES_mutation_matrix.txt"
+	output:
+		mp_res = "data/interim/{sample}_Affy_MP_term_res.txt"
+	threads: 1
+	params:
+		mem=r"4G",
+		database = lambda wildcards: config["database"]
+	shell:
+		"python3 {input.script} --database {params.database} --genelist {input.gene_list} --mpterms {input.mp_terms} --mpfunctions {input.mp_functions} --bed_file {input.bed} > {output.mp_res}"
+
+
+rule MetaP_Fisher:
+	input:
+		script = str(config["scripts"]) + "stat_test_LOF_MetaP_Fisher.py",
+		gene2gene = "data/interim/{sample}_gene2gene_res.txt",
+		GO = "data/interim/{sample}_GO_term_res.txt",
+		MP = "data/interim/{sample}_MP_term_res.txt",
+		cnv_gene2gene = "data/interim/{sample}_Affy_gene2gene_res.txt",
+		cnv_GO = "data/interim/{sample}_Affy_GO_term_res.txt",
+		cnv_MP = "data/interim/{sample}_Affy_MP_term_res.txt"
+	output:
+		fisher = "data/interim/{sample}_MetaP_Fisher.txt"
+	threads: 1
+	params:
+		mem=r"4G",
+		database = lambda wildcards: config["database"]
+	shell:
+		"python3 {input.script} --database {params.database} > {output.fisher}"
+
+rule gen_REPORT:
+	input:
+		script = "generate_REPORT.py",
+		homepage = "templates/homepage.html",
+		linkpage = "templates/link.html",
+		fisher = "data/interim/{sample}_MetaP_Fisher.txt"
+	output:
+		out = "data/interim/{sample}_instruction_for_REPORT.txt"
+	threads: 1
+	params:
+		mem=r"4G",
+		database = lambda wildcards: config["database"]
+	shell:
+		"python3 {input.script} --database {params.database} &&"
+		"echo open webpage in localhost:5000 > {output.out}"
+
+
+# "docker://fingerfen/vt_vcfanno_snpeff:latest"
+		# vt decompose -o /mnt/isilon/emanuel_lab/duongn/xhmm_370/gatk_run/bevCombind.vcfdecom.vcf /mnt/isilon/emanuel_lab/duongn/xhmm_370/gatk_run/bevCombind.vcf
+		# vt normalize -o /mnt/isilon/emanuel_lab/duongn/xhmm_370/gatk_run/bevCombind.vcf.decom_norm.vcf -r /mnt/isilon/dbhi_bfx/reference/human/g1k_v37/human_g1k_v37.fasta /mnt/isilon/emanuel_lab/duongn/xhmm_370/gatk_run/bevCombind.vcfdecom.vcf
+		# vcfanno -p 12 -lua ./rare_disease.lua temp.anno bevCombind.vcf.decom_norm.vcf > bevCombind.vcf.anno.vcf
+		# 
+		#"vcfanno -p 12 temp2.anno bevCombind.vcf.anno.vcf > bevCombind.vcf.anno2.vcf"
+		# vcfanno -p 12 temp3.anno bevCombind.vcf.anno2.vcf > bevCombind.vcf.anno3.vcf
+		# /mnt/isilon/emanuel_lab/Software/jdk1.8.0_121/bin/java -Xmx8g -jar /mnt/isilon/dbhi_bfx/xie/snpEff/snpEff.jar hg19kg /mnt/isilon/emanuel_lab/duongn/xhmm_370/gatk_run/bevCombind.vcf.anno3.vcf > /mnt/isilon/emanuel_lab/duongn/xhmm_370/gatk_run/bevCombind.vcf.anno.g.vcf
+		# /mnt/isilon/emanuel_lab/Software/jdk1.8.0_121/bin/java -jar /mnt/isilon/emanuel_lab/WGS/ws/GATK3.8/GenomeAnalysisTK.jar -T SelectVariants -R /mnt/isilon/dbhi_bfx/reference/human/g1k_v37/human_g1k_v37.fasta -V bevCombind.vcf.anno.g.vcf -selectType SNP -o raw_snps.vcf
+		# /mnt/isilon/emanuel_lab/Software/jdk1.8.0_121/bin/java -jar /mnt/isilon/emanuel_lab/WGS/ws/GATK3.8/GenomeAnalysisTK.jar -T VariantFiltration -R /mnt/isilon/dbhi_bfx/reference/human/g1k_v37/human_g1k_v37.fasta -V raw_snps.vcf --filterExpression "QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0" --filterName "my_snp_filter" -o filtered_snps.vcf
+		# /mnt/isilon/emanuel_lab/Software/jdk1.8.0_121/bin/java -jar /mnt/isilon/emanuel_lab/WGS/ws/GATK3.8/GenomeAnalysisTK.jar -T SelectVariants -R /mnt/isilon/dbhi_bfx/reference/human/g1k_v37/human_g1k_v37.fasta -V bevCombind.vcf.anno.g.vcf -selectType INDEL -o raw_indels.vcf
+		# /mnt/isilon/emanuel_lab/Software/jdk1.8.0_121/bin/java -jar /mnt/isilon/emanuel_lab/WGS/ws/GATK3.8/GenomeAnalysisTK.jar -T VariantFiltration -R /mnt/isilon/dbhi_bfx/reference/human/g1k_v37/human_g1k_v37.fasta -V raw_indels.vcf --filterExpression "QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0" --filterName "my_indel_filter" -o filtered_indels.vcf
+
+
+# rule filter_snp_indels_high_moderate:
+# 	input:
+# 	output:
+# 	threads: 1
+# 	params:
+# 		mem=r"4G"
+# 	shell:
+# 		awk filter snp
+# 		awk filter indels
+# 		awk filter high_moderate
+# 		awk filter non_high_moderate
+
+
+
+# rule filter_all_5_files:
+# 	input:
+# 		script = "filter_combined_GATK.py"
+# 	output:
+# 	threads: 1
+# 	params:
+# 		mem=r"4G"
+# 	shell:
+
+
+# rule stat_test_big_file:
+# 	input:
+# 		script = "stat_test_no_filter_072519.py"
+# 	output:
+# 	threads: 1
+# 	params:
+# 		mem=r"4G"
+# 	shell:
+
+
+# rule stat_test_gene_group:
+# 	input:
+# 	output:
+# 	threads: 1
+# 	params:
+# 		mem=r"4G"
+# 	shell:
+
+
+
+# rule stat_test_functional_analysis:
+# 	input:
+# 	output:
+# 	threads: 1
+# 	params:
+# 		mem=r"4G"
+# 	shell:
+
+
+
+
+
+
+
+
+
