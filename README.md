@@ -1,4 +1,4 @@
-# WES_Short_Variant_and_CNV_Pipeline
+# Short_Variant_and_CNV_Pipeline
 Bioinformatics pipeline on Conda Virtual Environment for Short Variant (WES) and Copy Number Variation Analyses
 
 
