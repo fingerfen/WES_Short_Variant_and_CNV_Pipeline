@@ -1,6 +1,7 @@
 #rvis
 [[annotation]]
-file="/Users/duongn/WorkFolder/WorkFolder/WES/reference/rvis.hg37.primary.bed.gz"
+#file="/mnt/isilon/dbhi_bfx/bin/gemini/data/gemini_data/grin/rvis_GRCh37.bed.gz"
+file="/mnt/isilon/dbhi_bfx/grin/rvis.hg37.primary.bed.gz"
 columns = [5,6]
 names=["rvis_score","rvis_pct"]
 ops=["max","max"]

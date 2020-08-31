@@ -1,6 +1,6 @@
 #ExAC 
 [[annotation]]
-file = "/Users/duongn/WorkFolder/WorkFolder/WES/reference/ExAC.r0.3.sites.vep.tidy.vcf.gz"
+file = "/mnt/isilon/dbhi_bfx/bin/gemini/data/gemini_data/ExAC.r0.3.sites.vep.tidy.vcf.gz"
 fields = ["AC_Adj", "AN_Adj"]
 names = ["exac_ac_all", "exac_an_all"]
 ops = ["max", "max"]
@@ -12,28 +12,28 @@ op = "lua:divfunc(exac_ac_all,exac_an_all)"
 type = "Float"
 
 [[annotation]]
-file="/Users/duongn/WorkFolder/WorkFolder/WES/reference/cadd_v1.3.vcf.gz"
+file="/mnt/isilon/emanuel_lab/Reference/cadd1.3_data/cadd_v1.3.vcf.gz"
 names=["cadd_phred", "cadd_raw"]
 ops=["mean", "mean"]
 fields=["phred", "raw"]
 
 #ESP
 [[annotation]]
-file ="/Users/duongn/WorkFolder/WorkFolder/WES/reference/ESP6500SI.all.snps_indels.tidy.v2.vcf.gz"
+file ="/mnt/isilon/dbhi_bfx/bin/gemini/data/gemini_data/ESP6500SI.all.snps_indels.tidy.v2.vcf.gz"
 fields = ["FG","AAC", "PH"]
 names = ["functionGVS", "aminoAcidChange", "polyPhen"]
 ops = ["self", "self", "self"]
 
 
 [[annotation]]
-file="/Users/duongn/WorkFolder/WorkFolder/WES/reference/clinvar_20170130.tidy.vcf.gz"
+file="/mnt/isilon/dbhi_bfx/bin/gemini/data/gemini_data/clinvar_20170130.tidy.vcf.gz"
 fields=["CLNSIG", "CLNDBN"]
 names=["clinvar_pathogenic", "clinvar_disease_name"]
 ops=["self", "self"]
 
 #ESP
 [[annotation]]
-file = "/Users/duongn/WorkFolder/WorkFolder/WES/reference/ESP6500SI.all.snps_indels.tidy.v2.vcf.gz"
+file = "/mnt/isilon/dbhi_bfx/bin/gemini/data/gemini_data/ESP6500SI.all.snps_indels.tidy.v2.vcf.gz"
 fields = ["FG","AAC", "PH"]
 names = ["functionGVS", "aminoAcidChange", "polyPhen"]
 ops = ["self", "self", "self"]
@@ -41,7 +41,8 @@ ops = ["self", "self", "self"]
 
 #Clinvar 5.8M
 [[annotation]]
-file="/Users/duongn/WorkFolder/WorkFolder/WES/reference/clinvar_20160203_noUnicode.tidy.vcf.gz"
+#file="/mnt/isilon/dbhi_bfx/bin/gemini/data/gemini_data/clinvar_20160203_noUnicode.tidy.vcf.gz"
+file="/mnt/isilon/dbhi_bfx/grin/clinvar_20160203_noUnicode.tidy.vcf.gz"
 fields=["CLNSIG", "CLNDBN"]
 names=["clinvar_pathogenic", "clinvar_disease_name"]
 ops=["self", "self"]
@@ -55,7 +56,7 @@ type="String"
 
 #HGMD 3.7M
 [[annotation]]
-file="/Users/duongn/WorkFolder/WorkFolder/WES/reference/HGMD_PRO_2016.1_hg19.vcf.bgz"
+file="/mnt/isilon/dbhi_bfx/grin/HGMD_PRO_2016.1_hg19.vcf.bgz"
 fields=["PHEN"]
 names=["hgmd_phen"]
 ops=["concat"]

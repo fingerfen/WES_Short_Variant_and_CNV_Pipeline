@@ -1,6 +1,6 @@
 #dbSNP 
 [[annotation]]
-file = "/Users/duongn/WorkFolder/WorkFolder/WES/reference/dbsnp137.coding.variants.sift.prediction.bed.gz"
+file = "/mnt/isilon/dbhi_bfx/bin/gemini/data/gemini_data/grin/dbsnp137.coding.variants.sift.prediction.bed.gz"
 columns = [14,15,18,19]
 names = ["Provean_score","Provean_prediction","SIFT_score","SIFT_prediction"]
 ops = ["self", "self", "self", "self"]
