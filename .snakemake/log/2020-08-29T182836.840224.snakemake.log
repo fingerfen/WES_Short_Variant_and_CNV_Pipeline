@@ -1,0 +1,57 @@
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 2
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	all
+	1	gen_REPORT
+	1	individual_metap_CNV_GO
+	1	individual_metap_CNV_MP
+	1	individual_metap_SNP_GO
+	1	individual_metap_SNP_MP
+	6
+
+[Sat Aug 29 18:28:36 2020]
+rule individual_metap_CNV_GO:
+    input: src/scripts/Individual_metap_CNV_GO.py, data/ref-data/human_GO.txt, data/ref-data/go_def.txt
+    output: data/interim/individual_bevCombind_CNV_GO_res.txt
+    jobid: 4
+    wildcards: sample=bevCombind
+
+python3 src/scripts/Individual_metap_CNV_GO.py --database data/endpoints/new.sqlite --goterms data/ref-data/human_GO.txt --gofunctions data/ref-data/go_def.txt > data/interim/individual_bevCombind_CNV_GO_res.txt
+
+[Sat Aug 29 18:28:37 2020]
+rule individual_metap_SNP_GO:
+    input: src/scripts/Individual_metap_SNP_GO.py, data/ref-data/human_GO.txt, data/ref-data/go_def.txt
+    output: data/interim/individual_bevCombind_SNP_GO_res.txt
+    jobid: 2
+    wildcards: sample=bevCombind
+
+python3 src/scripts/Individual_metap_SNP_GO.py --database data/endpoints/new.sqlite --goterms data/ref-data/human_GO.txt --gofunctions data/ref-data/go_def.txt > data/interim/individual_bevCombind_SNP_GO_res.txt
+Terminating processes on user request, this might take some time.
+[Sat Aug 29 18:28:38 2020]
+Error in rule individual_metap_CNV_GO:
+    jobid: 4
+    output: data/interim/individual_bevCombind_CNV_GO_res.txt
+
+[Sat Aug 29 18:28:38 2020]
+Error in rule individual_metap_SNP_GO:
+    jobid: 2
+    output: data/interim/individual_bevCombind_SNP_GO_res.txt
+
+RuleException:
+CalledProcessError in line 396 of /Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes:
+Command ' set -euo pipefail;  python3 src/scripts/Individual_metap_CNV_GO.py --database data/endpoints/new.sqlite --goterms data/ref-data/human_GO.txt --gofunctions data/ref-data/go_def.txt > data/interim/individual_bevCombind_CNV_GO_res.txt ' returned non-zero exit status 1.
+  File "/Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes", line 396, in __rule_individual_metap_CNV_GO
+  File "/opt/anaconda3/envs/snakemake/lib/python3.6/concurrent/futures/thread.py", line 56, in run
+Removing output files of failed job individual_metap_CNV_GO since they might be corrupted:
+data/interim/individual_bevCombind_CNV_GO_res.txt
+RuleException:
+CalledProcessError in line 365 of /Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes:
+Command ' set -euo pipefail;  python3 src/scripts/Individual_metap_SNP_GO.py --database data/endpoints/new.sqlite --goterms data/ref-data/human_GO.txt --gofunctions data/ref-data/go_def.txt > data/interim/individual_bevCombind_SNP_GO_res.txt ' returned non-zero exit status 1.
+  File "/Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes", line 365, in __rule_individual_metap_SNP_GO
+  File "/opt/anaconda3/envs/snakemake/lib/python3.6/concurrent/futures/thread.py", line 56, in run
+Removing output files of failed job individual_metap_SNP_GO since they might be corrupted:
+data/interim/individual_bevCombind_SNP_GO_res.txt
+Complete log: /Users/duongn/WorkFolder/WorkFolder/WES/final_run/.snakemake/log/2020-08-29T182836.840224.snakemake.log

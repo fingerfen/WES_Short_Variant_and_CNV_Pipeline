@@ -1,0 +1,4 @@
+Building DAG of jobs...
+MissingInputException in line 381 of /Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes:
+Missing input files for rule individual_metap_CNV_GO:
+src/scripts/Individual_metap_CNV_GO.py

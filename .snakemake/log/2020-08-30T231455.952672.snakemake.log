@@ -1,0 +1,39 @@
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 2
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	GO_term_analysis
+	1	MP_term_analysis
+	1	MetaP_Fisher
+	1	all
+	1	gen_REPORT
+	1	gene2gene_analysis
+	1	gene_WES_mutation_matrix
+	1	individual_metap_SNP_GO
+	1	individual_metap_SNP_MP
+	9
+
+[Sun Aug 30 23:14:56 2020]
+rule gene_WES_mutation_matrix:
+    input: src/scripts/1000_filter_mutation_matrix.py, data/ref-data/hg19_genes.bed, data/interim/gatk_filtered_DP_AD_bevCombind_PASS_high_moderate.vcf, data/endpoints/new.sqlite
+    output: data/interim/bevCombind_WES_mutation_matrix.txt
+    jobid: 13
+    wildcards: sample=bevCombind
+
+python3 src/scripts/1000_filter_mutation_matrix.py --input data/interim/gatk_filtered_DP_AD_bevCombind_PASS_high_moderate.vcf --genelist data/ref-data/hg19_genes.bed --database data/endpoints/new.sqlite > data/interim/bevCombind_WES_mutation_matrix.txt
+Terminating processes on user request, this might take some time.
+[Sun Aug 30 23:15:32 2020]
+Error in rule gene_WES_mutation_matrix:
+    jobid: 13
+    output: data/interim/bevCombind_WES_mutation_matrix.txt
+
+RuleException:
+CalledProcessError in line 229 of /Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes:
+Command ' set -euo pipefail;  python3 src/scripts/1000_filter_mutation_matrix.py --input data/interim/gatk_filtered_DP_AD_bevCombind_PASS_high_moderate.vcf --genelist data/ref-data/hg19_genes.bed --database data/endpoints/new.sqlite > data/interim/bevCombind_WES_mutation_matrix.txt ' returned non-zero exit status 1.
+  File "/Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes", line 229, in __rule_gene_WES_mutation_matrix
+  File "/opt/anaconda3/envs/snakemake/lib/python3.6/concurrent/futures/thread.py", line 56, in run
+Removing output files of failed job gene_WES_mutation_matrix since they might be corrupted:
+data/interim/bevCombind_WES_mutation_matrix.txt
+Complete log: /Users/duongn/WorkFolder/WorkFolder/WES/final_run/.snakemake/log/2020-08-30T231455.952672.snakemake.log

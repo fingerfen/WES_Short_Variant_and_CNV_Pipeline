@@ -1,0 +1,291 @@
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 2
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	GO_term_analysis
+	1	MP_term_analysis
+	1	MetaP_Fisher
+	1	affy_MP_term_analysis
+	1	affy_gene2gene_analysis
+	1	all
+	1	annotation1
+	1	annotation2
+	1	annotation3
+	1	filterSNPs
+	1	filter_results
+	1	gen_PASS_high_moderate
+	1	gen_REPORT
+	1	gene2gene_analysis
+	1	gene_WES_mutation_matrix
+	1	getSNPs
+	1	individual_metap_CNV_GO
+	1	individual_metap_CNV_MP
+	1	individual_metap_SNP_GO
+	1	individual_metap_SNP_MP
+	1	normalizem
+	1	snpeff
+	22
+
+[Sun Aug 30 02:14:31 2020]
+rule individual_metap_CNV_GO:
+    input: src/scripts/Individual_metap_CNV_GO.py, data/ref-data/human_GO.txt, data/ref-data/go_def.txt
+    output: data/interim/individual_bevCombind_CNV_GO_res.txt
+    jobid: 5
+    wildcards: sample=bevCombind
+
+python3 src/scripts/Individual_metap_CNV_GO.py --database data/endpoints/new.sqlite --goterms data/ref-data/human_GO.txt --gofunctions data/ref-data/go_def.txt > data/interim/individual_bevCombind_CNV_GO_res.txt
+
+[Sun Aug 30 02:14:32 2020]
+rule normalizem:
+    input: data/interim/bevCombind.vcfdecom.vcf, data/ref-data/human_g1k_v37.fasta
+    output: data/interim/bevCombind.vcf.decom_norm.vcf
+    jobid: 22
+    wildcards: sample=bevCombind
+
+vt normalize data/interim/bevCombind.vcfdecom.vcf -o data/interim/bevCombind.vcf.decom_norm.vcf -r data/ref-data/human_g1k_v37.fasta
+[Sun Aug 30 02:15:08 2020]
+Finished job 22.
+1 of 22 steps (5%) done
+
+[Sun Aug 30 02:15:08 2020]
+rule annotation1:
+    input: data/ref-data/rare_disease.lua, data/ref-data/temp.anno, data/interim/bevCombind.vcf.decom_norm.vcf
+    output: data/interim/bevCombind.vcf.anno.vcf
+    jobid: 21
+    wildcards: sample=bevCombind
+
+vcfanno -p 12 -lua data/ref-data/rare_disease.lua data/ref-data/temp.anno data/interim/bevCombind.vcf.decom_norm.vcf > data/interim/bevCombind.vcf.anno.vcf
+[Sun Aug 30 04:06:47 2020]
+Finished job 21.
+2 of 22 steps (9%) done
+
+[Sun Aug 30 04:06:47 2020]
+rule annotation2:
+    input: data/ref-data/temp2.anno, data/interim/bevCombind.vcf.anno.vcf
+    output: data/interim/bevCombind.vcf.anno2.vcf
+    jobid: 20
+    wildcards: sample=bevCombind
+
+vcfanno -p 12 data/ref-data/temp2.anno data/interim/bevCombind.vcf.anno.vcf > data/interim/bevCombind.vcf.anno2.vcf
+[Sun Aug 30 04:07:01 2020]
+Finished job 20.
+3 of 22 steps (14%) done
+
+[Sun Aug 30 04:07:01 2020]
+rule annotation3:
+    input: data/ref-data/temp3.anno, data/interim/bevCombind.vcf.anno2.vcf
+    output: data/interim/bevCombind.vcf.anno3.vcf
+    jobid: 19
+    wildcards: sample=bevCombind
+
+vcfanno -p 12 data/ref-data/temp3.anno data/interim/bevCombind.vcf.anno2.vcf > data/interim/bevCombind.vcf.anno3.vcf
+[Sun Aug 30 04:07:15 2020]
+Finished job 19.
+4 of 22 steps (18%) done
+
+[Sun Aug 30 04:07:15 2020]
+rule snpeff:
+    input: data/interim/bevCombind.vcf.anno3.vcf
+    output: data/interim/bevCombind.vcf.anno.g.vcf
+    jobid: 18
+    wildcards: sample=bevCombind
+
+java -Xmx2g -jar /opt/anaconda3/envs/snakemake/share/snpeff-4.3.1t-3/snpEff.jar -v hg19kg data/interim/bevCombind.vcf.anno3.vcf > data/interim/bevCombind.vcf.anno.g.vcf
+[Sun Aug 30 04:30:52 2020]
+Finished job 18.
+5 of 22 steps (23%) done
+
+[Sun Aug 30 04:30:52 2020]
+rule filter_results:
+    input: data/interim/bevCombind.vcf.anno.g.vcf, src/scripts/filter_combined_GATK.py
+    output: data/interim/gatk_filtered_DP_AD_bevCombind.vcf
+    jobid: 17
+    wildcards: sample=bevCombind
+
+python3 src/scripts/filter_combined_GATK.py data/interim/bevCombind.vcf.anno.g.vcf > data/interim/gatk_filtered_DP_AD_bevCombind.vcf
+[Sun Aug 30 04:33:54 2020]
+Finished job 17.
+6 of 22 steps (27%) done
+
+[Sun Aug 30 04:33:54 2020]
+rule getSNPs:
+    input: data/interim/gatk_filtered_DP_AD_bevCombind.vcf, data/ref-data/human_g1k_v37.fasta
+    output: data/interim/gatk_filtered_DP_AD_bevCombind_raw_snps.vcf, data/interim/gatk_filtered_DP_AD_bevCombind_raw_indels.vcf
+    jobid: 16
+    wildcards: sample=bevCombind
+
+gatk SelectVariants -R data/ref-data/human_g1k_v37.fasta -V data/interim/gatk_filtered_DP_AD_bevCombind.vcf -select-type SNP -O data/interim/gatk_filtered_DP_AD_bevCombind_raw_snps.vcf &&gatk SelectVariants -R data/ref-data/human_g1k_v37.fasta -V data/interim/gatk_filtered_DP_AD_bevCombind.vcf -select-type INDEL -O data/interim/gatk_filtered_DP_AD_bevCombind_raw_indels.vcf
+[Sun Aug 30 04:35:00 2020]
+Finished job 16.
+7 of 22 steps (32%) done
+
+[Sun Aug 30 04:35:00 2020]
+rule filterSNPs:
+    input: data/interim/gatk_filtered_DP_AD_bevCombind_raw_snps.vcf, data/interim/gatk_filtered_DP_AD_bevCombind_raw_indels.vcf, data/ref-data/human_g1k_v37.fasta
+    output: data/interim/gatk_filtered_DP_AD_bevCombind_PASS_annotated_snps.vcf, data/interim/gatk_filtered_DP_AD_bevCombind_PASS_annotated_indels.vcf
+    jobid: 15
+    wildcards: sample=bevCombind
+
+gatk VariantFiltration -R data/ref-data/human_g1k_v37.fasta -V data/interim/gatk_filtered_DP_AD_bevCombind_raw_snps.vcf -O data/interim/gatk_filtered_DP_AD_bevCombind_PASS_annotated_snps.vcf --filter-expression "QD < 2.0" --filter-name "QD_less_than_2" --filter-expression "FS > 60.0" --filter-name "FS_larger_than_60" --filter-expression "MQ < 40.0" --filter-name "MQ_less_than_40" --filter-expression "MQRankSum < -12.5" --filter-name "MQranksum_less_than_-12.5" --filter-expression "ReadPosRankSum < -8.0" --filter-name "readposranksum_less_than_-8" && gatk VariantFiltration -R data/ref-data/human_g1k_v37.fasta -V data/interim/gatk_filtered_DP_AD_bevCombind_raw_indels.vcf -O data/interim/gatk_filtered_DP_AD_bevCombind_PASS_annotated_indels.vcf --filter-expression "QD < 2.0" --filter-name "QD_less_than_2" --filter-expression "FS > 200.0" --filter-name "FS_larger_than_200" --filter-expression "ReadPosRankSum < -20.0" --filter-name "readposranksum_less_than_-20" 
+[Sun Aug 30 04:35:35 2020]
+Finished job 15.
+8 of 22 steps (36%) done
+
+[Sun Aug 30 04:35:35 2020]
+rule gen_PASS_high_moderate:
+    input: data/interim/gatk_filtered_DP_AD_bevCombind_PASS_annotated_snps.vcf, data/interim/gatk_filtered_DP_AD_bevCombind_PASS_annotated_indels.vcf
+    output: data/interim/gatk_filtered_DP_AD_bevCombind_PASS_high_moderate.vcf
+    jobid: 14
+    wildcards: sample=bevCombind
+
+awk '$7~/PASS/||/^#CHROM/' data/interim/gatk_filtered_DP_AD_bevCombind_PASS_annotated_snps.vcf | grep 'HIGH\|MODERATE\|^#CHROM' > data/interim/gatk_filtered_DP_AD_bevCombind_PASS_high_moderate.vcf && awk '$7~/PASS/' data/interim/gatk_filtered_DP_AD_bevCombind_PASS_annotated_indels.vcf | grep 'HIGH\|MODERATE' >> data/interim/gatk_filtered_DP_AD_bevCombind_PASS_high_moderate.vcf
+[Sun Aug 30 04:36:04 2020]
+Finished job 14.
+9 of 22 steps (41%) done
+
+[Sun Aug 30 04:36:04 2020]
+rule gene_WES_mutation_matrix:
+    input: src/scripts/1000_filter_mutation_matrix.py, data/ref-data/hg19_genes.bed, data/interim/gatk_filtered_DP_AD_bevCombind_PASS_high_moderate.vcf, data/endpoints/new.sqlite
+    output: data/interim/bevCombind_WES_mutation_matrix.txt
+    jobid: 7
+    wildcards: sample=bevCombind
+
+python3 src/scripts/1000_filter_mutation_matrix.py --input data/interim/gatk_filtered_DP_AD_bevCombind_PASS_high_moderate.vcf --genelist data/ref-data/hg19_genes.bed --database data/endpoints/new.sqlite > data/interim/bevCombind_WES_mutation_matrix.txt
+[Sun Aug 30 04:37:16 2020]
+Finished job 7.
+10 of 22 steps (45%) done
+
+[Sun Aug 30 04:37:16 2020]
+rule GO_term_analysis:
+    input: src/scripts/stat_test_LOF_GO_term_pval.py, data/ref-data/hg19_genes.bed, data/ref-data/human_GO.txt, data/ref-data/go_def.txt, data/interim/bevCombind_WES_mutation_matrix.txt
+    output: data/interim/bevCombind_GO_term_res.txt
+    jobid: 12
+    wildcards: sample=bevCombind
+
+python3 src/scripts/stat_test_LOF_GO_term_pval.py --database data/endpoints/new.sqlite --goterms data/ref-data/human_GO.txt --gofunctions data/ref-data/go_def.txt > data/interim/bevCombind_GO_term_res.txt
+[Sun Aug 30 05:23:37 2020]
+Finished job 12.
+11 of 22 steps (50%) done
+
+[Sun Aug 30 05:23:37 2020]
+rule individual_metap_SNP_GO:
+    input: src/scripts/Individual_metap_SNP_GO.py, data/ref-data/human_GO.txt, data/ref-data/go_def.txt, data/interim/bevCombind_WES_mutation_matrix.txt
+    output: data/interim/individual_bevCombind_SNP_GO_res.txt
+    jobid: 4
+    wildcards: sample=bevCombind
+
+python3 src/scripts/Individual_metap_SNP_GO.py --database data/endpoints/new.sqlite --goterms data/ref-data/human_GO.txt --gofunctions data/ref-data/go_def.txt > data/interim/individual_bevCombind_SNP_GO_res.txt
+[Sun Aug 30 12:14:19 2020]
+Finished job 5.
+12 of 22 steps (55%) done
+
+[Sun Aug 30 12:14:19 2020]
+rule MP_term_analysis:
+    input: src/scripts/stat_test_LOF_MP_term_pval.py, data/ref-data/hg19_genes.bed, data/ref-data/human_MP_ws.txt, data/ref-data/mp_def.txt, data/interim/bevCombind_WES_mutation_matrix.txt
+    output: data/interim/bevCombind_MP_term_res.txt
+    jobid: 10
+    wildcards: sample=bevCombind
+
+python3 src/scripts/stat_test_LOF_MP_term_pval.py --database data/endpoints/new.sqlite --mpterms data/ref-data/human_MP_ws.txt --mpfunctions data/ref-data/mp_def.txt > data/interim/bevCombind_MP_term_res.txt
+[Sun Aug 30 12:34:27 2020]
+Finished job 4.
+13 of 22 steps (59%) done
+
+[Sun Aug 30 12:34:27 2020]
+rule individual_metap_SNP_MP:
+    input: src/scripts/Individual_metap_SNP_MP.py, data/ref-data/human_MP_ws.txt, data/ref-data/mp_def.txt, data/interim/bevCombind_WES_mutation_matrix.txt
+    output: data/interim/individual_bevCombind_SNP_MP_res.txt
+    jobid: 3
+    wildcards: sample=bevCombind
+
+python3 src/scripts/Individual_metap_SNP_MP.py --database data/endpoints/new.sqlite --mpterms data/ref-data/human_MP_ws.txt --mpfunctions data/ref-data/mp_def.txt > data/interim/individual_bevCombind_SNP_MP_res.txt
+[Sun Aug 30 12:37:22 2020]
+Finished job 10.
+14 of 22 steps (64%) done
+
+[Sun Aug 30 12:37:22 2020]
+rule gene2gene_analysis:
+    input: src/scripts/stat_test_LOF_gene_pval.py, data/ref-data/hg19_genes.bed, data/interim/bevCombind_WES_mutation_matrix.txt
+    output: data/interim/bevCombind_gene2gene_res.txt
+    jobid: 13
+    wildcards: sample=bevCombind
+
+python3 src/scripts/stat_test_LOF_gene_pval.py --database data/endpoints/new.sqlite > data/interim/bevCombind_gene2gene_res.txt
+[Sun Aug 30 12:38:36 2020]
+Finished job 13.
+15 of 22 steps (68%) done
+
+[Sun Aug 30 12:38:36 2020]
+rule affy_MP_term_analysis:
+    input: src/scripts/stat_test_LOF_Affy_MP_term_pval.py, data/ref-data/hg19_genes.bed, data/ref-data/human_MP_ws.txt, data/ref-data/mp_def.txt, data/bevCombind_cnv.bed
+    output: data/interim/bevCombind_Affy_MP_term_res.txt
+    jobid: 8
+    wildcards: sample=bevCombind
+
+python3 src/scripts/stat_test_LOF_Affy_MP_term_pval.py --database data/endpoints/new.sqlite --mpterms data/ref-data/human_MP_ws.txt --mpfunctions data/ref-data/mp_def.txt > data/interim/bevCombind_Affy_MP_term_res.txt
+[Sun Aug 30 12:53:10 2020]
+Finished job 8.
+16 of 22 steps (73%) done
+
+[Sun Aug 30 12:53:10 2020]
+rule individual_metap_CNV_MP:
+    input: src/scripts/Individual_metap_CNV_MP.py, data/ref-data/human_MP_ws.txt, data/ref-data/mp_def.txt
+    output: data/interim/individual_bevCombind_CNV_MP_res.txt
+    jobid: 2
+    wildcards: sample=bevCombind
+
+python3 src/scripts/Individual_metap_CNV_MP.py --database data/endpoints/new.sqlite --mpterms data/ref-data/human_MP_ws.txt --mpfunctions data/ref-data/mp_def.txt > data/interim/individual_bevCombind_CNV_MP_res.txt
+[Sun Aug 30 15:54:20 2020]
+Finished job 2.
+17 of 22 steps (77%) done
+
+[Sun Aug 30 15:54:20 2020]
+rule affy_gene2gene_analysis:
+    input: src/scripts/stat_test_LOF_Affy_gene_pval.py, data/ref-data/hg19_genes.bed, data/bevCombind_cnv.bed
+    output: data/interim/bevCombind_Affy_gene2gene_res.txt
+    jobid: 11
+    wildcards: sample=bevCombind
+
+python3 src/scripts/stat_test_LOF_Affy_gene_pval.py --database data/endpoints/new.sqlite > data/interim/bevCombind_Affy_gene2gene_res.txt
+[Sun Aug 30 15:54:46 2020]
+Finished job 11.
+18 of 22 steps (82%) done
+
+[Sun Aug 30 15:54:46 2020]
+rule MetaP_Fisher:
+    input: src/scripts/stat_test_LOF_MetaP_Fisher.py, data/interim/bevCombind_gene2gene_res.txt, data/interim/bevCombind_GO_term_res.txt, data/interim/bevCombind_MP_term_res.txt, data/interim/bevCombind_Affy_gene2gene_res.txt, data/interim/bevCombind_Affy_GO_term_res.txt, data/interim/bevCombind_Affy_MP_term_res.txt
+    output: data/interim/bevCombind_MetaP_Fisher.txt
+    jobid: 6
+    wildcards: sample=bevCombind
+
+python3 src/scripts/stat_test_LOF_MetaP_Fisher.py --database data/endpoints/new.sqlite > data/interim/bevCombind_MetaP_Fisher.txt
+[Sun Aug 30 15:54:50 2020]
+Finished job 6.
+19 of 22 steps (86%) done
+[Sun Aug 30 17:06:33 2020]
+Finished job 3.
+20 of 22 steps (91%) done
+
+[Sun Aug 30 17:06:33 2020]
+rule gen_REPORT:
+    input: data/interim/bevCombind_MetaP_Fisher.txt, data/interim/individual_bevCombind_SNP_GO_res.txt, data/interim/individual_bevCombind_SNP_MP_res.txt, data/interim/individual_bevCombind_CNV_GO_res.txt, data/interim/individual_bevCombind_CNV_MP_res.txt, src/scripts/generate_report.py, project_summary.txt
+    output: data/endpoints/bevCombind_homepage.html
+    jobid: 1
+    wildcards: sample=bevCombind
+
+python3 src/scripts/generate_report.py --database data/endpoints/new.sqlite --project_summary project_summary.txt --homepage_path data/endpoints/bevCombind_homepage.html
+[Sun Aug 30 17:06:54 2020]
+Finished job 1.
+21 of 22 steps (95%) done
+
+[Sun Aug 30 17:06:54 2020]
+localrule all:
+    input: data/endpoints/bevCombind_homepage.html
+    jobid: 0
+
+[Sun Aug 30 17:06:54 2020]
+Finished job 0.
+22 of 22 steps (100%) done
+Complete log: /Users/duongn/WorkFolder/WorkFolder/WES/final_run/.snakemake/log/2020-08-30T021431.759893.snakemake.log

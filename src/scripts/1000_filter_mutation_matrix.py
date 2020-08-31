@@ -25,6 +25,10 @@ parser.add_argument('--input', required=True,
                     help='path to the input .vcf file, the file filtered for high-moderate impact')
 parser.add_argument('--database', required=True,
                     help='path to the sqlite3 database file that holds the sample names of the two cohorts')
+parser.add_argument('--genelist', required=True,
+                    help='path to the file containing all genes name, start, and end location in the human genome.\
+                    make sure its version matches with your human reference genome \(i.e hg19/hg38\)')
+
 
 args = parser.parse_args()
 
@@ -66,9 +70,35 @@ sum_mat = heart_matrix4.sum(axis=0)
 sum_mat_res = (sum_mat.loc[sum_mat <= 1000]).index
 less1000_heart_matrix4 = heart_matrix4[sum_mat_res]
 
-mutation_info_and_heart_matrix4 = pd.concat([mutation_info,less1000_heart_matrix4],axis=1)
+## Import gene list to assocaite varaint to genes
+gene_list = pd.read_csv(args.genelist, delimiter='\t', dtype={'chr': str, 'start': int, 'end': int})
+#gene_list = pd.read_csv('/Users/duongn/WorkFolder/WorkFolder/Mike_code/Heart_Defect/unique_hg19_gene.txt', delimiter='\t', dtype={'chr': str, 'start': int, 'end': int})
+
+#Get rid of chr in the chromosome entries
+gene_list['chr'] = gene_list['chr'].apply( lambda x : x.strip('chr'))
+
+#Make a place holder for the for loop below
+gene_assoc = (mutation_info.iloc[:,0]).copy()
+
+#Loop to make gene_assoc, to associate which gene contain which mutation detected. 
+small_gene_list = []
+for row in mutation_info.itertuples():
+    #check if overlap
+    gene_df = gene_list.loc[(gene_list['chr'] == row._1) & (gene_list['start'] <= row.POS) & (gene_list['end'] >= row.POS)]
+    #Put associated gene into the same row as the mutation
+    gene_assoc.at[row.Index] = list(gene_df['gene'])
+
+#Convert gene assoc to dataFrame and join the genes into a string, comma separated
+gene_assoc_df = pd.DataFrame(gene_assoc.map(lambda x: ','.join(x)))
+#Rename column
+gene_assoc_df.columns = ['GENE']
 
 
+#Add the GENE column to the first column of the VCF file
+mutation_info_and_heart_matrix4 = pd.concat([gene_assoc_df,mutation_info,less1000_heart_matrix4],axis=1)
+
+
+#Export to Database
 conn = sqlite3.connect(args.database)
 ## Insert the computed dataframe as a table in the sqlite3 database
 mutation_info_and_heart_matrix4.to_sql('short_variant_mutation_matrix', conn, if_exists="replace", index=False)

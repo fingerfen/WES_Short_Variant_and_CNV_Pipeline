@@ -1,0 +1,31 @@
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 2
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	all
+	1	gen_REPORT
+	2
+
+[Sun Aug 30 23:16:29 2020]
+rule gen_REPORT:
+    input: data/interim/bevCombind_MetaP_Fisher.txt, data/interim/individual_bevCombind_SNP_GO_res.txt, data/interim/individual_bevCombind_SNP_MP_res.txt, data/interim/individual_bevCombind_CNV_GO_res.txt, data/interim/individual_bevCombind_CNV_MP_res.txt, src/scripts/generate_report.py, project_summary.txt
+    output: data/endpoints/bevCombind_homepage.html
+    jobid: 1
+    wildcards: sample=bevCombind
+
+python3 src/scripts/generate_report.py --database data/endpoints/new.sqlite --project_summary project_summary.txt --homepage_path data/endpoints/bevCombind_homepage.html
+[Sun Aug 30 23:16:29 2020]
+Error in rule gen_REPORT:
+    jobid: 1
+    output: data/endpoints/bevCombind_homepage.html
+
+RuleException:
+CalledProcessError in line 430 of /Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes:
+Command ' set -euo pipefail;  python3 src/scripts/generate_report.py --database data/endpoints/new.sqlite --project_summary project_summary.txt --homepage_path data/endpoints/bevCombind_homepage.html ' returned non-zero exit status 1.
+  File "/Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes", line 430, in __rule_gen_REPORT
+  File "/opt/anaconda3/envs/snakemake/lib/python3.6/concurrent/futures/thread.py", line 56, in run
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: /Users/duongn/WorkFolder/WorkFolder/WES/final_run/.snakemake/log/2020-08-30T231628.971267.snakemake.log

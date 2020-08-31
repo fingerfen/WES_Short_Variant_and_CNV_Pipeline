@@ -1,0 +1,4 @@
+Building DAG of jobs...
+MissingInputException in line 62 of /Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes:
+Missing input files for rule annotation2:
+data/ref-data/temp2.anno

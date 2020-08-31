@@ -32,9 +32,6 @@ parser = argparse.ArgumentParser(description="""Gene-Gene analysis: This script
 
 parser.add_argument('--database', required=True,
                     help='path to the sqlite3 database file that holds the sample names of the two cohorts')
-parser.add_argument('--genelist', required=True,
-                    help='path to the file containing all genes name, start, and end location in the human genome.\
-                    make sure its version matches with your human reference genome \(i.e hg19/hg38\)')
 parser.add_argument('--goterms', required=True,
                     help='path to the file containing go term and associated gene\
                     1st column is gene name, 2nd column is go_term')
@@ -58,6 +55,10 @@ conn = sqlite3.connect(args.database)
 ## Read in the "id_table" that holds the list of all sample IDs
 df = pd.read_sql_query("SELECT * from id_table", conn)
 matrix_temp = pd.read_sql_query("SELECT * from short_variant_mutation_matrix", conn)
+#Make a copy of the gene column
+gene_assoc = matrix_temp['GENE'].copy()
+#Then drop the gene column from the table so the table returns to normal GATK vcf format
+matrix_temp = matrix_temp.drop(columns='GENE')
 
 conn.close()
 
@@ -93,30 +94,16 @@ high_moderate_matrix_yes = yes_heart_matrix4.copy()
 high_moderate_matrix_no = no_heart_matrix4.copy()
 
 
-## Read in list of genes in the hg19 genome
-gene_list = pd.read_csv(args.genelist, delimiter='\t', dtype={'chr': str, 'start': int, 'end': int})
-#gene_list = pd.read_csv('/Users/duongn/WorkFolder/WorkFolder/WES/pipe/data/ref-data/hg19_genes.bed', delimiter='\t')
-gene_list['chr'] = gene_list['chr'].apply( lambda x : x.strip('chr'))
+## Read in list of genes associated with each mutation from the Database
+## Put these genes into a list to itterate over later for mutation load analysis
+small_gene_list = [] 
+gene_assoc.map(lambda x: small_gene_list.extend(x.split(',')))
 
-gene_assoc = (high_moderate_mutation_info.iloc[:,0]).copy()
-
-
-############################################ Gene pval test LOOP ######################################
-## For each mutation, find which gene that mutation is in
-## Create a matrix of the same size as the mutation matrix
-## For each row, get the genes in "hg19 gene DATABASE" that overlap that mutation
-
-small_gene_list = []
-for row in high_moderate_mutation_info.itertuples():
-    gene_df = gene_list.loc[(gene_list['chr'] == row._1) & (gene_list['start'] <= row.POS) & (gene_list['end'] >= row.POS)]
-    #$# This line doesn't save anything.... may need to delete or change
-    #np.unique(gene_df['name2'])
-    gene_assoc.at[row.Index] = list(gene_df['gene'])
-    small_gene_list += list(gene_df['gene'])
-    
-    
+#Put these genes from string into a list of string.
+gene_assoc = gene_assoc.map(lambda x: x.split(','))
 ## Make a unique list of genes to iterate over later on
-u_small_gene_list = np.unique(small_gene_list)
+## Get rid of '' entries using list comprehension
+u_small_gene_list = np.unique([i for i in small_gene_list if i])
 
 
 ####################

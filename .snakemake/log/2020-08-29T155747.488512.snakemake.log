@@ -1,0 +1,6 @@
+Building DAG of jobs...
+MissingInputException in line 351 of /Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes:
+Missing input files for rule individual_metap_SNP_GO:
+data/ref-data/go_def.txt
+data/ref-data/human_GO.txt
+src/scripts/individual_metap_SNP_GO.py

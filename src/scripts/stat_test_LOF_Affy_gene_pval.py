@@ -36,13 +36,9 @@ parser = argparse.ArgumentParser(description="""Gene-Gene analysis: This script
                                                 in each gene and compare the 
                                                 Experimental vs Control groups""") 
 
-parser.add_argument('--bed_file', required=True,
-                    help='path to the bed file with columns as chr,start,end,sampleid')
+
 parser.add_argument('--database', required=True,
                     help='path to the sqlite3 database file that holds the sample names of the two cohorts')
-parser.add_argument('--genelist', required=True,
-                    help='path to the file containing all genes name, start, and end location in the human genome.\
-                    make sure its version matches with your human reference genome \(i.e hg19/hg38\)')
 
 
 
@@ -53,7 +49,9 @@ args = parser.parse_args()
 fin_case_df = pd.DataFrame()
 fin_case_and_control_df = pd.DataFrame()
 
-################ Generate two DataFrame- WithHeart Disease DataFrame and WithOUT heart disease DataFrame #########################
+####################################################################################################
+################ Get the samples of Cases and Controls to merge with CNV bed file #########################
+####################################################################################################
 
 
 #Make a connection to the database
@@ -63,6 +61,7 @@ conn = sqlite3.connect(args.database)
 ## Read in the "id_table" that holds the list of all sample IDs
 df = pd.read_sql_query("SELECT * from id_table", conn)
 matrix_temp = pd.read_sql_query("SELECT * from short_variant_mutation_matrix", conn)
+matrix_temp = matrix_temp.drop(columns='GENE')
 
 conn.close()
 
@@ -81,42 +80,38 @@ no_heart = merged_id.loc[merged_id.iloc[:,1] == 0]
 
 ##Generate a list of sample name stored in a DataFrame to be merged with CNV list later on
 yes_sample = pd.DataFrame(pd.unique(yes_heart.iloc[:,0]))
-yes_sample.columns = ['WES from U. Washington file ID']
+yes_sample.columns = ['ID']
 no_sample = pd.DataFrame(pd.unique(no_heart.iloc[:,0]))
-no_sample.columns = ['WES from U. Washington file ID']
-
-bed_file = pd.read_csv(args.bed_file, delimiter='\t', dtype={'chr': str, 'start': int, 'end': int})
-#bed_file = pd.read_csv('/Users/duongn/WorkFolder/WorkFolder/WES/pipe/data/bev_affy.bed', delimiter='\t', dtype={'chr': str, 'start': int, 'end': int})
-bed_file['chr'] = bed_file['chr'].apply( lambda x : x.strip('chr'))
-
-gene_assoc = (bed_file.iloc[:,0].copy()).astype(str)
-
-## Read in list of genes in the hg19 genome
-#gene_list = pd.read_csv(args.genelist, delimiter='\t')
-gene_list = pd.read_csv(args.genelist, delimiter='\t', dtype={'chr': str, 'start': int, 'end': int})
-#gene_list = pd.read_csv('/Users/duongn/WorkFolder/WorkFolder/WES/pipe/data/ref-data/hg19_genes.bed', delimiter='\t')
-gene_list['chr'] = gene_list['chr'].apply( lambda x : x.strip('chr'))
+no_sample.columns = ['ID']
 
 
+####################################################################################################
+################ Import bed file and gene_assoc dataframe to process #########################
+####################################################################################################
 
+conn = sqlite3.connect(args.database)
+#conn = sqlite3.connect('/Users/duongn/WorkFolder/WorkFolder/WES/pipe/data/endpoints/new.sqlite')
 
+## Read in the "id_table" that holds the list of all sample IDs
+bed_file = pd.read_sql_query("SELECT * from CNV_mutation_matrix", conn)
+bed_file = bed_file.loc[bed_file['CNV_TYPE'] == 'DEL']
 
-############################################ Gene pval test LOOP ######################################
-## For each mutation, find which gene that mutation is in
-## Create a matrix of the same size as the mutation matrix
-## For each row, get the genes in "hg19 gene DATABASE" that overlap that mutation
+conn.close()
 
-small_gene_list = []
-for row in bed_file.itertuples():
-    gene_df = gene_list.loc[(gene_list['chr'] == row.chr) & (gene_list['start'] <= row.end) & (gene_list['end'] >= row.start)]
-    #$# This line doesn't save anything.... may need to delete or change
-    #np.unique(gene_df['name2'])
-    gene_assoc.at[row.Index] = list(gene_df['gene'])
-    small_gene_list += list(gene_df['gene'])
-    
-    
+gene_assoc = bed_file['GENE'].copy()
+#Then drop the gene column from the table so the table returns to normal GATK vcf format
+bed_file = bed_file.drop(columns='GENE')
+
+## Read in list of genes associated with each mutation from the Database
+## Put these genes into a list to itterate over later for mutation load analysis
+small_gene_list = [] 
+gene_assoc.map(lambda x: small_gene_list.extend(x.split(',')))
+
+#Put these genes from string into a list of string.
+gene_assoc = gene_assoc.map(lambda x: x.split(','))
 ## Make a unique list of genes to iterate over later on
-u_small_gene_list = np.unique(small_gene_list)
+## Get rid of '' entries using list comprehension
+u_small_gene_list = np.unique([i for i in small_gene_list if i])
 
 
 ####################################################################################################
@@ -142,12 +137,12 @@ for gene_eval_index,gene_eval in enumerate(u_small_gene_list):
     # Merge and take only those patients who has the same WES ID to ensure comparability
 
     # split into those YES ( with CHD) and NO (without CHD)
-    yes_affy_wes_res = affy_gene_res.merge(yes_sample,on='WES from U. Washington file ID')
-    no_affy_wes_res = affy_gene_res.merge(no_sample,on='WES from U. Washington file ID')
+    yes_affy_wes_res = affy_gene_res.merge(yes_sample,on='ID')
+    no_affy_wes_res = affy_gene_res.merge(no_sample,on='ID')
 
     # Turn the counts into a series, count how many mutations does each sample have
-    yes_affy_mutations = yes_affy_wes_res['WES from U. Washington file ID'].value_counts()
-    no_affy_mutations = no_affy_wes_res['WES from U. Washington file ID'].value_counts()
+    yes_affy_mutations = yes_affy_wes_res['ID'].value_counts()
+    no_affy_mutations = no_affy_wes_res['ID'].value_counts()
 
     # Create the zeros values for those samples who don't have a mutation. Concat em, then input into mannwhiteney
 #    stat_test_yes = pd.concat([pd.Series(np.zeros([yes_sample.shape[0] - yes_affy_mutations.shape[0],])),yes_affy_mutations])

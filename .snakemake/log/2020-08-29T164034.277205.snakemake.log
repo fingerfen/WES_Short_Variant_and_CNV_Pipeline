@@ -1,0 +1,8 @@
+Building DAG of jobs...
+MissingInputException in line 312 of /Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes:
+Missing input files for rule affy_MP_term_analysis:
+data/ref-data/hg19_genes.bed
+src/scripts/stat_test_LOF_Affy_MP_term_pval.py
+data/ref-data/mp_def.txt
+data/ref-data/human_MP_ws.txt
+data/bevCombind_cnv.bed

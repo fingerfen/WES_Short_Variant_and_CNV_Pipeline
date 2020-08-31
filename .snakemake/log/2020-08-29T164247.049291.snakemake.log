@@ -1,0 +1,4 @@
+Building DAG of jobs...
+MissingInputException in line 35 of /Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes:
+Missing input files for rule normalizem:
+data/ref-data/human_g1k_v37.fasta

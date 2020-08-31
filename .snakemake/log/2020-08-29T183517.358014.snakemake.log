@@ -1,0 +1,169 @@
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 2
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	GO_term_analysis
+	1	MP_term_analysis
+	1	MetaP_Fisher
+	1	affy_GO_term_analysis
+	1	affy_MP_term_analysis
+	1	affy_gene2gene_analysis
+	1	all
+	1	annotation1
+	1	annotation2
+	1	annotation3
+	1	decomp
+	1	filterSNPs
+	1	filter_results
+	1	gen_PASS_high_moderate
+	1	gen_REPORT
+	1	gene2gene_analysis
+	1	gene_WES_mutation_matrix
+	1	getSNPs
+	1	individual_metap_CNV_GO
+	1	individual_metap_CNV_MP
+	1	individual_metap_SNP_GO
+	1	individual_metap_SNP_MP
+	1	normalizem
+	1	snpeff
+	24
+
+[Sat Aug 29 18:35:17 2020]
+rule decomp:
+    input: data/bevCombind.vcf
+    output: data/interim/bevCombind.vcfdecom.vcf
+    jobid: 23
+    wildcards: sample=bevCombind
+
+vt decompose data/bevCombind.vcf -o data/interim/bevCombind.vcfdecom.vcf
+
+[Sat Aug 29 18:35:17 2020]
+rule affy_GO_term_analysis:
+    input: src/scripts/stat_test_LOF_Affy_GO_term_pval.py, data/ref-data/hg19_genes.bed, data/ref-data/human_GO.txt, data/ref-data/go_def.txt, data/bevCombind_cnv.bed
+    output: data/interim/bevCombind_Affy_GO_term_res.txt
+    jobid: 11
+    wildcards: sample=bevCombind
+
+python3 src/scripts/stat_test_LOF_Affy_GO_term_pval.py --database data/endpoints/new.sqlite --goterms data/ref-data/human_GO.txt --gofunctions data/ref-data/go_def.txt > data/interim/bevCombind_Affy_GO_term_res.txt
+[Sat Aug 29 18:35:54 2020]
+Finished job 23.
+1 of 24 steps (4%) done
+
+[Sat Aug 29 18:35:54 2020]
+rule normalizem:
+    input: data/interim/bevCombind.vcfdecom.vcf, data/ref-data/human_g1k_v37.fasta
+    output: data/interim/bevCombind.vcf.decom_norm.vcf
+    jobid: 22
+    wildcards: sample=bevCombind
+
+vt normalize data/interim/bevCombind.vcfdecom.vcf -o data/interim/bevCombind.vcf.decom_norm.vcf -r data/ref-data/human_g1k_v37.fasta
+[Sat Aug 29 18:37:26 2020]
+Finished job 22.
+2 of 24 steps (8%) done
+
+[Sat Aug 29 18:37:26 2020]
+rule annotation1:
+    input: data/ref-data/rare_disease.lua, data/ref-data/temp.anno, data/interim/bevCombind.vcf.decom_norm.vcf
+    output: data/interim/bevCombind.vcf.anno.vcf
+    jobid: 21
+    wildcards: sample=bevCombind
+
+vcfanno -p 12 -lua data/ref-data/rare_disease.lua data/ref-data/temp.anno data/interim/bevCombind.vcf.decom_norm.vcf > data/interim/bevCombind.vcf.anno.vcf
+[Sat Aug 29 20:11:38 2020]
+Finished job 11.
+3 of 24 steps (12%) done
+
+[Sat Aug 29 20:11:38 2020]
+rule individual_metap_CNV_GO:
+    input: src/scripts/Individual_metap_CNV_GO.py, data/ref-data/human_GO.txt, data/ref-data/go_def.txt
+    output: data/interim/individual_bevCombind_CNV_GO_res.txt
+    jobid: 4
+    wildcards: sample=bevCombind
+
+python3 src/scripts/Individual_metap_CNV_GO.py --database data/endpoints/new.sqlite --goterms data/ref-data/human_GO.txt --gofunctions data/ref-data/go_def.txt > data/interim/individual_bevCombind_CNV_GO_res.txt
+[Sat Aug 29 20:25:13 2020]
+Finished job 21.
+4 of 24 steps (17%) done
+
+[Sat Aug 29 20:25:13 2020]
+rule annotation2:
+    input: data/ref-data/temp2.anno, data/interim/bevCombind.vcf.anno.vcf
+    output: data/interim/bevCombind.vcf.anno2.vcf
+    jobid: 20
+    wildcards: sample=bevCombind
+
+vcfanno -p 12 data/ref-data/temp2.anno data/interim/bevCombind.vcf.anno.vcf > data/interim/bevCombind.vcf.anno2.vcf
+[Sat Aug 29 20:25:28 2020]
+Finished job 20.
+5 of 24 steps (21%) done
+
+[Sat Aug 29 20:25:28 2020]
+rule annotation3:
+    input: data/ref-data/temp3.anno, data/interim/bevCombind.vcf.anno2.vcf
+    output: data/interim/bevCombind.vcf.anno3.vcf
+    jobid: 19
+    wildcards: sample=bevCombind
+
+vcfanno -p 12 data/ref-data/temp3.anno data/interim/bevCombind.vcf.anno2.vcf > data/interim/bevCombind.vcf.anno3.vcf
+[Sat Aug 29 20:25:43 2020]
+Finished job 19.
+6 of 24 steps (25%) done
+
+[Sat Aug 29 20:25:43 2020]
+rule snpeff:
+    input: data/interim/bevCombind.vcf.anno3.vcf
+    output: data/interim/bevCombind.vcf.anno.g.vcf
+    jobid: 18
+    wildcards: sample=bevCombind
+
+java -Xmx2g -jar /opt/anaconda3/envs/snakemake/share/snpeff-4.3.1t-3/snpEff.jar -v hg19kg data/interim/bevCombind.vcf.anno3.vcf > data/interim/bevCombind.vcf.anno.g.vcf
+[Sat Aug 29 20:50:21 2020]
+Finished job 18.
+7 of 24 steps (29%) done
+
+[Sat Aug 29 20:50:21 2020]
+rule filter_results:
+    input: data/interim/bevCombind.vcf.anno.g.vcf, src/scripts/filter_combined_GATK.py
+    output: data/interim/gatk_filtered_DP_AD_bevCombind.vcf
+    jobid: 17
+    wildcards: sample=bevCombind
+
+python3 src/scripts/filter_combined_GATK.py data/interim/bevCombind.vcf.anno.g.vcf > data/interim/gatk_filtered_DP_AD_bevCombind.vcf
+[Sat Aug 29 20:53:49 2020]
+Finished job 17.
+8 of 24 steps (33%) done
+
+[Sat Aug 29 20:53:49 2020]
+rule getSNPs:
+    input: data/interim/gatk_filtered_DP_AD_bevCombind.vcf, data/ref-data/human_g1k_v37.fasta
+    output: data/interim/gatk_filtered_DP_AD_bevCombind_raw_snps.vcf, data/interim/gatk_filtered_DP_AD_bevCombind_raw_indels.vcf
+    jobid: 16
+    wildcards: sample=bevCombind
+
+gatk SelectVariants -R data/ref-data/human_g1k_v37.fasta -V data/interim/gatk_filtered_DP_AD_bevCombind.vcf -select-type SNP -O data/interim/gatk_filtered_DP_AD_bevCombind_raw_snps.vcf &&gatk SelectVariants -R data/ref-data/human_g1k_v37.fasta -V data/interim/gatk_filtered_DP_AD_bevCombind.vcf -select-type INDEL -O data/interim/gatk_filtered_DP_AD_bevCombind_raw_indels.vcf
+[Sat Aug 29 20:53:57 2020]
+Error in rule getSNPs:
+    jobid: 16
+    output: data/interim/gatk_filtered_DP_AD_bevCombind_raw_snps.vcf, data/interim/gatk_filtered_DP_AD_bevCombind_raw_indels.vcf
+
+RuleException:
+CalledProcessError in line 127 of /Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes:
+Command ' set -euo pipefail;  gatk SelectVariants -R data/ref-data/human_g1k_v37.fasta -V data/interim/gatk_filtered_DP_AD_bevCombind.vcf -select-type SNP -O data/interim/gatk_filtered_DP_AD_bevCombind_raw_snps.vcf &&gatk SelectVariants -R data/ref-data/human_g1k_v37.fasta -V data/interim/gatk_filtered_DP_AD_bevCombind.vcf -select-type INDEL -O data/interim/gatk_filtered_DP_AD_bevCombind_raw_indels.vcf ' returned non-zero exit status 2.
+  File "/Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes", line 127, in __rule_getSNPs
+  File "/opt/anaconda3/envs/snakemake/lib/python3.6/concurrent/futures/thread.py", line 56, in run
+Terminating processes on user request, this might take some time.
+[Sun Aug 30 02:05:23 2020]
+Error in rule individual_metap_CNV_GO:
+    jobid: 4
+    output: data/interim/individual_bevCombind_CNV_GO_res.txt
+
+RuleException:
+CalledProcessError in line 397 of /Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes:
+Command ' set -euo pipefail;  python3 src/scripts/Individual_metap_CNV_GO.py --database data/endpoints/new.sqlite --goterms data/ref-data/human_GO.txt --gofunctions data/ref-data/go_def.txt > data/interim/individual_bevCombind_CNV_GO_res.txt ' returned non-zero exit status 1.
+  File "/Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes", line 397, in __rule_individual_metap_CNV_GO
+  File "/opt/anaconda3/envs/snakemake/lib/python3.6/concurrent/futures/thread.py", line 56, in run
+Removing output files of failed job individual_metap_CNV_GO since they might be corrupted:
+data/interim/individual_bevCombind_CNV_GO_res.txt
+Complete log: /Users/duongn/WorkFolder/WorkFolder/WES/final_run/.snakemake/log/2020-08-29T183517.358014.snakemake.log

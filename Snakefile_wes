@@ -6,22 +6,23 @@ configfile : "config.yaml"
 
 
 # ALL_FILES = expand("data/interim/{sample}_gene2gene_res.txt", sample=config["samples"])
-# ALL_GO = expand("data/interim/{sample}_GO_term_res.txt", sample=config["samples"])
+ALL_GO = expand("data/endpoints/{sample}_homepage.html", sample=config["samples"])
 # ALL_MP = expand("data/interim/{sample}_MP_term_res.txt", sample=config["samples"])
 # ALL_AFFY_GENES = expand("data/interim/{sample}_Affy_gene2gene_res.txt", sample=config["samples"])
 # ALL_AFFY_GO = expand("data/interim/{sample}_Affy_GO_term_res.txt", sample=config["samples"])
 # ALL_AFFY_MP = expand("data/interim/{sample}_Affy_MP_term_res.txt", sample=config["samples"])
-ALL_REPORT = expand("data/interim/{sample}_instruction_for_REPORT.txt", sample=config["samples"])
+#ALL_REPORT = expand("data/endpoints/{sample}_homepage.html", sample=config["samples"])
+#ALL_TEST = expand("data/interim/{sample}_WES_mutation_matrix.txt", sample=config["samples"])
 
 
 rule all:
 	input:
-		ALL_REPORT
+		ALL_GO
 
 
 rule decomp:
 	input:
-		str(config["vcf_path"]) + "{sample}" + str(config["vcf_ext"])
+		str(config["vcf_path"]) + "{sample}" + str(config["vcf_ext"]),
 	output:
 		"data/interim/{sample}.vcfdecom.vcf"
 	threads: 1
@@ -207,10 +208,15 @@ rule gen_PASS_high_moderate:
 # 		""" grep -v 'HIGH\|MODERATE\|^##' {input.gatk_DP_AD} > {output.non_high_moderate} """
 
 
+
+## Read and process the SNP data. 
+## Find gene associated with SNP entries and filter out any samples with >1000 called SNPs
+## Put the final SNPs data w their associated GENEs in a database for easy access later on
 rule gene_WES_mutation_matrix:
 	input:
 		script = str(config["scripts"]) + "1000_filter_mutation_matrix.py",
-		pass_high_moderate = "data/interim/gatk_filtered_DP_AD_{sample}_PASS_high_moderate.vcf"
+		gene_list = str(config["chromosome_file_path"]) + "hg19_genes.bed",
+		pass_high_moderate = "data/interim/gatk_filtered_DP_AD_{sample}_PASS_high_moderate.vcf",
 		#pass_high_moderate = "data/interim/gatk_filtered_DP_AD_{sample}_high_moderate.vcf"
 	output:
 		WES_mat = "data/interim/{sample}_WES_mutation_matrix.txt"
@@ -219,7 +225,7 @@ rule gene_WES_mutation_matrix:
 		mem=r"4G",
 		database = lambda wildcards: config["database"]
 	shell:
-		"python3 {input.script} --input {input.pass_high_moderate} --database {params.database} > {output.WES_mat}"
+		"python3 {input.script} --input {input.pass_high_moderate} --genelist {input.gene_list} --database {params.database} > {output.WES_mat}"
 
 
 
@@ -235,7 +241,7 @@ rule gene2gene_analysis:
 		mem=r"4G",
 		database = lambda wildcards: config["database"]
 	shell:
-		"python3 {input.script} --database {params.database} --genelist {input.gene_list} > {output.gene2gene}"
+		"python3 {input.script} --database {params.database} > {output.gene2gene}"
 
 rule GO_term_analysis:
 	input:
@@ -251,7 +257,7 @@ rule GO_term_analysis:
 		mem=r"4G",
 		database = lambda wildcards: config["database"]
 	shell:
-		"python3 {input.script} --database {params.database} --genelist {input.gene_list} --goterms {input.go_terms} --gofunctions {input.go_functions} > {output.go_res}"
+		"python3 {input.script} --database {params.database} --goterms {input.go_terms} --gofunctions {input.go_functions} > {output.go_res}"
 
 rule MP_term_analysis:
 	input:
@@ -267,7 +273,7 @@ rule MP_term_analysis:
 		mem=r"4G",
 		database = lambda wildcards: config["database"]
 	shell:
-		"python3 {input.script} --database {params.database} --genelist {input.gene_list} --mpterms {input.mp_terms} --mpfunctions {input.mp_functions} > {output.mp_res}"
+		"python3 {input.script} --database {params.database} --mpterms {input.mp_terms} --mpfunctions {input.mp_functions} > {output.mp_res}"
 
 
 
@@ -284,7 +290,7 @@ rule affy_gene2gene_analysis:
 		mem=r"4G",
 		database = lambda wildcards: config["database"]
 	shell:
-		"python3 {input.script} --database {params.database} --genelist {input.gene_list} --bed_file {input.bed} > {output.gene2gene}"
+		"python3 {input.script} --database {params.database} > {output.gene2gene}"
 
 rule affy_GO_term_analysis:
 	input:
@@ -301,7 +307,7 @@ rule affy_GO_term_analysis:
 		mem=r"4G",
 		database = lambda wildcards: config["database"]
 	shell:
-		"python3 {input.script} --database {params.database} --genelist {input.gene_list} --goterms {input.go_terms} --gofunctions {input.go_functions} --bed_file {input.bed}> {output.go_res}"
+		"python3 {input.script} --database {params.database} --goterms {input.go_terms} --gofunctions {input.go_functions} > {output.go_res}"
 
 
 rule affy_MP_term_analysis:
@@ -319,7 +325,9 @@ rule affy_MP_term_analysis:
 		mem=r"4G",
 		database = lambda wildcards: config["database"]
 	shell:
-		"python3 {input.script} --database {params.database} --genelist {input.gene_list} --mpterms {input.mp_terms} --mpfunctions {input.mp_functions} --bed_file {input.bed} > {output.mp_res}"
+		"python3 {input.script} --database {params.database} --mpterms {input.mp_terms} --mpfunctions {input.mp_functions} > {output.mp_res}"
+
+
 
 
 rule MetaP_Fisher:
@@ -340,21 +348,86 @@ rule MetaP_Fisher:
 	shell:
 		"python3 {input.script} --database {params.database} > {output.fisher}"
 
-rule gen_REPORT:
+
+rule individual_metap_SNP_GO:
 	input:
-		script = "generate_REPORT.py",
-		homepage = "templates/homepage.html",
-		linkpage = "templates/link.html",
-		fisher = "data/interim/{sample}_MetaP_Fisher.txt"
+		script = str(config["scripts"]) + "Individual_metap_SNP_GO.py",
+		go_terms = str(config["chromosome_file_path"]) + "human_GO.txt",
+		go_functions = str(config["chromosome_file_path"]) + "go_def.txt",
+		WES_mat = "data/interim/{sample}_WES_mutation_matrix.txt"
 	output:
-		out = "data/interim/{sample}_instruction_for_REPORT.txt"
+		SNP_GO = "data/interim/individual_{sample}_SNP_GO_res.txt"
 	threads: 1
 	params:
 		mem=r"4G",
 		database = lambda wildcards: config["database"]
 	shell:
-		"python3 {input.script} --database {params.database} &&"
-		"echo open webpage in localhost:5000 > {output.out}"
+		"python3 {input.script} --database {params.database} --goterms {input.go_terms} --gofunctions {input.go_functions} > {output.SNP_GO}"
+
+
+rule individual_metap_SNP_MP:
+	input:
+		script = str(config["scripts"]) + "Individual_metap_SNP_MP.py",
+		mp_terms = str(config["chromosome_file_path"]) + "human_MP_ws.txt",
+		mp_functions = str(config["chromosome_file_path"]) + "mp_def.txt",
+		WES_mat = "data/interim/{sample}_WES_mutation_matrix.txt"
+	output:
+		SNP_MP = "data/interim/individual_{sample}_SNP_MP_res.txt"
+	threads: 1
+	params:
+		mem=r"4G",
+		database = lambda wildcards: config["database"]
+	shell:
+		"python3 {input.script} --database {params.database} --mpterms {input.mp_terms} --mpfunctions {input.mp_functions} > {output.SNP_MP}"
+
+
+rule individual_metap_CNV_GO:
+	input:
+		script = str(config["scripts"]) + "Individual_metap_CNV_GO.py",
+		go_terms = str(config["chromosome_file_path"]) + "human_GO.txt",
+		go_functions = str(config["chromosome_file_path"]) + "go_def.txt"
+	output:
+		CNV_GO = "data/interim/individual_{sample}_CNV_GO_res.txt"
+	threads: 1
+	params:
+		mem=r"4G",
+		database = lambda wildcards: config["database"]
+	shell:
+		"python3 {input.script} --database {params.database} --goterms {input.go_terms} --gofunctions {input.go_functions} > {output.CNV_GO}"
+
+
+rule individual_metap_CNV_MP:
+	input:
+		script = str(config["scripts"]) + "Individual_metap_CNV_MP.py",
+		mp_terms = str(config["chromosome_file_path"]) + "human_MP_ws.txt",
+		mp_functions = str(config["chromosome_file_path"]) + "mp_def.txt"
+	output:
+		CNV_MP = "data/interim/individual_{sample}_CNV_MP_res.txt"
+	threads: 1
+	params:
+		mem=r"4G",
+		database = lambda wildcards: config["database"]
+	shell:
+		"python3 {input.script} --database {params.database} --mpterms {input.mp_terms} --mpfunctions {input.mp_functions} > {output.CNV_MP}"
+
+
+rule gen_REPORT:
+	input:
+		fisher = "data/interim/{sample}_MetaP_Fisher.txt",
+		SNP_GO = "data/interim/individual_{sample}_SNP_GO_res.txt",
+		SNP_MP = "data/interim/individual_{sample}_SNP_MP_res.txt",
+		CNV_GO = "data/interim/individual_{sample}_CNV_GO_res.txt",
+		CNV_MP = "data/interim/individual_{sample}_CNV_MP_res.txt",
+		script = str(config["scripts"]) + "generate_report.py",
+		proj_sum = lambda wildcards: config["project_summary"]
+	output:
+		out = "data/endpoints/{sample}_homepage.html"
+	threads: 1
+	params:
+		mem=r"4G",
+		database = lambda wildcards: config["database"]
+	shell:
+		"python3 {input.script} --database {params.database} --project_summary {input.proj_sum} --homepage_path {output.out}"
 
 
 # "docker://fingerfen/vt_vcfanno_snpeff:latest"
@@ -422,10 +495,6 @@ rule gen_REPORT:
 # 	params:
 # 		mem=r"4G"
 # 	shell:
-
-
-
-
 
 
 

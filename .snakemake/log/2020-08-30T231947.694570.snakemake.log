@@ -1,0 +1,31 @@
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 2
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	all
+	1	gen_REPORT
+	2
+
+[Sun Aug 30 23:19:47 2020]
+rule gen_REPORT:
+    input: data/interim/bevCombind_MetaP_Fisher.txt, data/interim/individual_bevCombind_SNP_GO_res.txt, data/interim/individual_bevCombind_SNP_MP_res.txt, data/interim/individual_bevCombind_CNV_GO_res.txt, data/interim/individual_bevCombind_CNV_MP_res.txt, src/scripts/generate_report.py, project_summary.txt
+    output: data/endpoints/bevCombind_homepage.html
+    jobid: 1
+    wildcards: sample=bevCombind
+
+python3 src/scripts/generate_report.py --database data/endpoints/new.sqlite --project_summary project_summary.txt --homepage_path data/endpoints/bevCombind_homepage.html
+[Sun Aug 30 23:20:12 2020]
+Finished job 1.
+1 of 2 steps (50%) done
+
+[Sun Aug 30 23:20:12 2020]
+localrule all:
+    input: data/endpoints/bevCombind_homepage.html
+    jobid: 0
+
+[Sun Aug 30 23:20:12 2020]
+Finished job 0.
+2 of 2 steps (100%) done
+Complete log: /Users/duongn/WorkFolder/WorkFolder/WES/final_run/.snakemake/log/2020-08-30T231947.694570.snakemake.log

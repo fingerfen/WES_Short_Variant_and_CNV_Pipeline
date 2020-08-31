@@ -1,0 +1,4 @@
+Building DAG of jobs...
+MissingInputException in line 22 of /Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes:
+Missing input files for rule decomp:
+data/bevCombind_PASS_high_moderate.vcf

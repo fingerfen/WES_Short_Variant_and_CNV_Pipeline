@@ -1,0 +1,75 @@
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 2
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	GO_term_analysis
+	1	MP_term_analysis
+	1	MetaP_Fisher
+	1	affy_GO_term_analysis
+	1	affy_MP_term_analysis
+	1	affy_gene2gene_analysis
+	1	all
+	1	annotation1
+	1	annotation2
+	1	annotation3
+	1	decomp
+	1	filterSNPs
+	1	filter_results
+	1	gen_PASS_high_moderate
+	1	gen_REPORT
+	1	gene2gene_analysis
+	1	gene_WES_mutation_matrix
+	1	getSNPs
+	1	individual_metap_CNV_GO
+	1	individual_metap_CNV_MP
+	1	individual_metap_SNP_GO
+	1	individual_metap_SNP_MP
+	1	normalizem
+	1	snpeff
+	24
+
+[Sat Aug 29 18:28:45 2020]
+rule decomp:
+    input: data/bevCombind.vcf
+    output: data/interim/bevCombind.vcfdecom.vcf
+    jobid: 23
+    wildcards: sample=bevCombind
+
+vt decompose data/bevCombind.vcf -o data/interim/bevCombind.vcfdecom.vcf
+
+[Sat Aug 29 18:28:45 2020]
+rule affy_GO_term_analysis:
+    input: src/scripts/stat_test_LOF_Affy_GO_term_pval.py, data/ref-data/hg19_genes.bed, data/ref-data/human_GO.txt, data/ref-data/go_def.txt, data/bevCombind_cnv.bed
+    output: data/interim/bevCombind_Affy_GO_term_res.txt
+    jobid: 9
+    wildcards: sample=bevCombind
+
+python3 src/scripts/stat_test_LOF_Affy_GO_term_pval.py --database data/endpoints/new.sqlite --goterms data/ref-data/human_GO.txt --gofunctions data/ref-data/go_def.txt > data/interim/bevCombind_Affy_GO_term_res.txt
+[Sat Aug 29 18:28:46 2020]
+Error in rule affy_GO_term_analysis:
+    jobid: 9
+    output: data/interim/bevCombind_Affy_GO_term_res.txt
+
+RuleException:
+CalledProcessError in line 311 of /Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes:
+Command ' set -euo pipefail;  python3 src/scripts/stat_test_LOF_Affy_GO_term_pval.py --database data/endpoints/new.sqlite --goterms data/ref-data/human_GO.txt --gofunctions data/ref-data/go_def.txt > data/interim/bevCombind_Affy_GO_term_res.txt ' returned non-zero exit status 1.
+  File "/Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes", line 311, in __rule_affy_GO_term_analysis
+  File "/opt/anaconda3/envs/snakemake/lib/python3.6/concurrent/futures/thread.py", line 56, in run
+Removing output files of failed job affy_GO_term_analysis since they might be corrupted:
+data/interim/bevCombind_Affy_GO_term_res.txt
+Terminating processes on user request, this might take some time.
+[Sat Aug 29 18:28:50 2020]
+Error in rule decomp:
+    jobid: 23
+    output: data/interim/bevCombind.vcfdecom.vcf
+
+RuleException:
+CalledProcessError in line 32 of /Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes:
+Command ' set -euo pipefail;  vt decompose data/bevCombind.vcf -o data/interim/bevCombind.vcfdecom.vcf ' died with <Signals.SIGINT: 2>.
+  File "/Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes", line 32, in __rule_decomp
+  File "/opt/anaconda3/envs/snakemake/lib/python3.6/concurrent/futures/thread.py", line 56, in run
+Removing output files of failed job decomp since they might be corrupted:
+data/interim/bevCombind.vcfdecom.vcf
+Complete log: /Users/duongn/WorkFolder/WorkFolder/WES/final_run/.snakemake/log/2020-08-29T182845.253970.snakemake.log

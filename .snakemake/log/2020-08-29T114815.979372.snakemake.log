@@ -1,0 +1,5 @@
+Building DAG of jobs...
+MissingInputException in line 411 of /Users/duongn/WorkFolder/WorkFolder/WES/final_run/Snakefile_wes:
+Missing input files for rule gen_REPORT:
+project_summary.txt
+src/scripts/generate_report.py

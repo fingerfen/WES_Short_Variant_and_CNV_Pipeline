@@ -23,6 +23,8 @@
 import pandas as pd
 import sqlite3
 
+
+
 ############# Merge heart anno, ethnic tables , and chr22 list together #################
 # Merge heart_anno and ethnic
 
@@ -42,11 +44,11 @@ b = a.loc[a['cluster'] == 'Cau']
 c = list_full.merge(b,left_on=0, right_on='WES from U. Washington file ID')
 
 ## Establish a connection to a sqlite3 database
-conn = sqlite3.connect('/Users/duongn/WorkFolder/WorkFolder/Mike_code/WEBSITE_JAWN/new.sqlite')
+conn = sqlite3.connect(args.database)
 
 ## Create a table to be put into a database
 id_table = c[['WES from U. Washington file ID','heart6']]
-id_table.columns = ['ID','Heart_Phenotype']
+id_table.columns = ['ID','Cohort']
 
 ## Export the DataFrame to a table in the database
 id_table.to_sql('id_table', conn, if_exists="replace")

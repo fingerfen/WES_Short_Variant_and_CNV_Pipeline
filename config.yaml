@@ -1,7 +1,6 @@
 samples:
   bevCombind:
 
-
 vcf_path: data/
 
 vcf_ext: .vcf
@@ -24,5 +23,6 @@ endpoints_folder: data/endpoints/
 
 scripts: src/scripts/
 
+project_summary: project_summary.txt
 
 size_cutoff: 1000
