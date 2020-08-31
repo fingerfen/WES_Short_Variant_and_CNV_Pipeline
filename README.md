@@ -10,7 +10,7 @@ Bioinformatics pipeline on Conda Virtual Environment for Short Variant (WES) and
 ```
 <p float="left">
   <img src="cohort_analysis_only.svg" width="500" />
-  <img src="individual_analysis.svg" width="100" /> 
+  <img src="individual_analysis.svg" width="500" /> 
 </p>
 
 # Program Requirements:
