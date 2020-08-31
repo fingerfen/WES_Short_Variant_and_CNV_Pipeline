@@ -8,8 +8,10 @@ Bioinformatics pipeline on Conda Virtual Environment for Short Variant (WES) and
 ```
 [<img src="dag.svg">]()
 ```
-![alt-text-1](<img src="dag.svg"> "title-1") ![alt-text-2](<img src="dag.svg"> "title-2")
-
+<p float="left">
+  <img src="dag.svg" width="100" />
+  <img src="dag.svg" width="100" /> 
+</p>
 
 # Program Requirements:
 ### Preinstalled on the system
