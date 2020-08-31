@@ -1,11 +1,15 @@
+
 # Short_Variant_and_CNV_Pipeline
 Bioinformatics pipeline on Conda Virtual Environment for Short Variant (WES) and Copy Number Variation Analyses
 
 
 
 # DAG - Pipeline 's Flow
-
+```
 [<img src="dag.svg">]()
+```
+![alt-text-1](<img src="dag.svg"> "title-1") ![alt-text-2](<img src="dag.svg"> "title-2")
+
 
 # Program Requirements:
 ### Preinstalled on the system
@@ -21,15 +25,12 @@ Bioinformatics pipeline on Conda Virtual Environment for Short Variant (WES) and
 - Scientific packages i.e (Pandas, Spicy, Numpy)
 
 # Input Files Requirements:
+
+## These files below are to be provided by the user
 - **.vcf**
   * Variant Call Format file
   * Contains Short Variant called of all samples
   * Columns should be: ` #CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT, then individual samples`
-
-- **.bed**
-  * File that stores CNV discovery results from your desired method (SNPs array, WGS, WES)
-  * SHOULD ALREADY BE FILTERED
-  * Columns should be: ` chr, start, end, ID`
 - **.sqlite** 
   * A database file that has a table named `id_table` in it already
   * The table is user generated
@@ -37,10 +38,46 @@ Bioinformatics pipeline on Conda Virtual Environment for Short Variant (WES) and
   * ID is the sample id
   * Heart_Phenotype is either 0 or 1 (int). 0 is controlled group, 1 is cases group
   * This table will get accessed to separate the Controlled from Cases group
+- **.bed**
+  * **Put this BED file in the sqlite database above**
+  * File that stores CNV discovery results from your desired method (SNPs array, WGS, WES)
+  * SHOULD ALREADY BE FILTERED
+  * Columns should be: ` chr, start, end, ID`
 - **.fasta/.fa**
   * Reference file that you used for Short Variant Discovery
 - **.fasta.fai**
   * Indexed file for the reference file
+- **project_summary.txt**
+  * A simple text file with a few line describing what the project is about
+- **temp.anno, temp2.anno, temp3.anno**
+	- These are the 3 scripts files used by **vcfanno** to annotate the SNP data. 
+	- **IF run on Respublica or CHOP server**
+		- Then nothing need to be modified in these files
+	- **IF run on non-CHOP server**
+		- Then these temp.anno, temp2.anno, temp3.anno files need to be modified a bit. 
+		- Access each of these file to provide the accurate information on the location of these files listed below:
+			- ExAC.r0.3.sites.vep.tidy.vcf.gz
+			- cadd_v1.3.vcf.gz
+			- ESP6500SI.all.snps_indels.tidy.v2.vcf.gz
+			- clinvar_20170130.tidy.vcf.gz
+			- clinvar_20160203_noUnicode.tidy.vcf.gz
+			- HGMD_PRO_2016.1_hg19.vcf.bgz
+			- dbsnp137.coding.variants.sift.prediction.bed.gz
+			- rvis.hg37.primary.bed.gz
+## These files are provided in the repository
+- **go_def.txt**
+	- Gene Ontology definitions
+- **human_GO.txt**
+	- Gene Ontology - Human Gene pairs
+- **mp_def.txt**
+	- Mammalian Phenotype definitions
+- **human_MP.txt**
+	- Mammalian Phenotype - Human Gene pairs
+- **hg19_genes.bed**
+	- Info on chromosome, gene start and end location
+- **rare_disease.lua**
+	- Lua file for the annotation step
+
 
 
 # Operation Instruction
@@ -58,11 +95,6 @@ Bioinformatics pipeline on Conda Virtual Environment for Short Variant (WES) and
   * Make sure that all files above are downstream from the Snakemake file
   * Edit the config.yaml
   * Execute the Snakemake command to run the pipeline
-  * The output is in data/endpoints – relative to where the Snakefile is
-  * In the main directory of the repo, or where the `generate_REPORT.py` is. 
-	  * Run `python3 generate_REPORT.py --database put_sqlite_database_path_here`
-	  * Go to google chrome
-	  * Type in `localhost:5000` to see the webpage
 
 ## DON'T USE ABSOLUTE PATH IN THE CONFIG.YAML FILE
 ## EVERYFILES NEEDED FOR THE PIPELINE MUST BE AT LEAST AT THE SAME OR 1 DIRECTORY BELOW THE SNAKEFILE
@@ -91,12 +123,14 @@ snakemake --use-singularity -s Snakefile_wes --configfile config.yaml -d . -j -p
 
 # Output
 
-- The final webpage will be hosted on local host port 5000
-- Relative to where the Snakemake file is, the pipeline will make `data/interim/` folder to store the intermediate files.
+* The output is in data/endpoints/ – relative to where the Snakefile is
+	* The output includes the {yoursamplename}_homepage.html file and the **index** folder and its content. 
+* Relative to where the Snakemake file is, the pipeline will make `data/interim/` folder to store the intermediate files.
 
 # Notes
 
-- The pipeline should take a few hours to run for roughly 300 samples
+- The pipeline was tested on a 2009 iMac with 2 cores, 10Gb of ram and took 18 hours to run (A normal computer these days should have better specs than this system)
+	- Sample size was ~300 SNP and CNV samples
 - Speed may vary depending on hardware and size of your data
 
   
