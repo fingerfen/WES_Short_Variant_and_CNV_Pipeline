@@ -5,10 +5,8 @@ Bioinformatics pipeline on Conda Virtual Environment for Short Variant (WES) and
 
 
 # DAG - Pipeline 's Flow
-```
+
 [<img src="dag.svg">]()
-```
-![alt-text-1](<img src="dag.svg"> "title-1") ![alt-text-2](<img src="dag.svg"> "title-2")
 
 
 # Program Requirements:
