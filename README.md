@@ -5,14 +5,10 @@ Bioinformatics pipeline on Conda Virtual Environment for Short Variant (WES) and
 
 
 # DAG - Pipeline 's Flow
-## Cohort Analysis
-
-[<img src="cohort_analysis_only.svg">]()
-
-## Individual Sample Analysis
-
-[<img src="individual_analysis.svg">]()
-
+```
+[<img src="dag.svg">]()
+```
+![alt-text-1](<img src="dag.svg"> "title-1") ![alt-text-2](<img src="dag.svg"> "title-2")
 
 
 # Program Requirements:
@@ -36,7 +32,7 @@ Bioinformatics pipeline on Conda Virtual Environment for Short Variant (WES) and
   * Contains Short Variant called of all samples
   * Columns should be: ` #CHROM, POS, ID, REF, ALT, QUAL, FILTER, INFO, FORMAT, then individual samples`
 - **.sqlite** 
-  * A database file that has a table named `id_table` in it already
+  * A database file that has a **table named `id_table` in it already**
   * The table is user generated
   * Columns of the `id_table` should be: `ID, cases_controls`
   * ID is the sample id
