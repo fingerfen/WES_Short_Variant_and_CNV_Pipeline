@@ -8,7 +8,7 @@ Bioinformatics pipeline on Conda Virtual Environment for Short Variant (WES) and
 ## Cohort Analysis 
 [<img src="cohort_analysis_only.svg">]()
 ## Individual Analysis
-[<img src="individual_analysis_only.svg">]()
+[<img src="individual_analysis.svg">]()
 
 # Program Requirements:
 ### Preinstalled on the system
