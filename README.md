@@ -138,7 +138,7 @@ snakemake --use-singularity -s Snakefile_wes --configfile config.yaml -d . -j -p
 Please direct any questions towards      |                           |
 ---------------------------------------- |:-------------------------:|
 Mike Xie                                 | xiem1@email.chop.edu      |
-Nhat Duong                               |     |
+Nhat Duong                               | h2obuffalo97@gmail.com    |
  
  
 # Citation
