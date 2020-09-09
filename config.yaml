@@ -1,3 +1,9 @@
+## Sample is the name of the file that you want to carry through.
+## If the sample name is bob, then all of the files created from this pipeline
+## would have "bob" as the prefix.
+## i.e bob_homepage.html, bob_high_and_moderate_SNPs, bob_gene2gene_results.txt
+
+## Make sure to change all of these paths to point to the location of these files on YOUR device
 samples:
   bevCombind:
 

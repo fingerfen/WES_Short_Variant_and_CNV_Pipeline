@@ -4,6 +4,7 @@ import sys
 import sqlite3
 import argparse
 
+##function to read VCF file and output it in a certain format for easy processing later on in the code.
 def read_vcf(path):
     import pandas as pd
     import io
@@ -19,8 +20,9 @@ def read_vcf(path):
                'QUAL': str, 'FILTER': str, 'INFO': str},
         sep='\t')
 
-parser = argparse.ArgumentParser(description="""Code to generate a matrix that has mutation counts for
-                                                later analyses""") 
+parser = argparse.ArgumentParser(description="""Code to turn the VCF info into a matrix (row=mutation, column=counts of mutation) for
+                                                later analyses. It also filters out any samples that has more than 1000 
+                                                variant/mutation calls""") 
 parser.add_argument('--input', required=True,
                     help='path to the input .vcf file, the file filtered for high-moderate impact')
 parser.add_argument('--database', required=True,

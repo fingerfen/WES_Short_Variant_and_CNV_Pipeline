@@ -8,11 +8,8 @@ import argparse
 
 
 ## Define arg parser to take in inputs
-parser = argparse.ArgumentParser(description="""Gene-Gene analysis: This script
-                                                performs the gene to gene analysis
-                                                by taking a look at mutations called
-                                                in each gene and compare the 
-                                                Experimental vs Control groups""") 
+parser = argparse.ArgumentParser(description="""Individual Sample Analysis: Using GO terms and 
+                                                sample's SNP data to perform metaP Fisher test""") 
 
 
 parser.add_argument('--database', required=True,
@@ -26,12 +23,12 @@ parser.add_argument('--gofunctions', required=True,
 
 args = parser.parse_args()
 
-
+## Read in files
 human_GO = pd.read_csv(args.goterms, delimiter='\t')
-#human_GO = pd.read_csv('/Users/duongn/WorkFolder/WorkFolder/Mike_code/Heart_Defect/human_GO.txt', delimiter='\t')
 go_def = pd.read_csv(args.gofunctions, delimiter='\t')
-#go_def = pd.read_csv('/Users/duongn/WorkFolder/WorkFolder/Mike_code/Heart_Defect/go_def.txt', delimiter='\t')
 
+
+############  Generate a list of UNIQUE go terms #################
 u_list_GO = pd.Series(np.unique(human_GO['GO']))
 u_list_GO = u_list_GO.loc[u_list_GO != 'all']
 u_list_GO_gene = pd.Series(u_list_GO.copy())
@@ -42,8 +39,8 @@ for u_GO_index,u_GO in enumerate(u_list_GO):
     u_list_GO_gene.at[u_GO_index] = bob
     print(u_GO_index)
 
+##################################################################
 
-#conn = sqlite3.connect(args.database)
 conn = sqlite3.connect(args.database)
 
 ## Read in the "id_table" that holds the list of all sample IDs
@@ -62,6 +59,7 @@ mutation_matrix = matrix_temp.iloc[:,9:]
 
 filtered_col_names = pd.DataFrame(mutation_matrix.columns, columns=['ID'], dtype='int64')
 
+## Get the table with all of the ID names
 merged_id = df.merge(filtered_col_names, on='ID' )
 id_column = merged_id['ID'].astype('str')
 
@@ -69,14 +67,27 @@ id_column = merged_id['ID'].astype('str')
 print('Done importing files')
 ##Evaluation of individual SNP GO
 
+
+## Create 2 lists. One to hold the pval_id for each sample
+## The other one is to hold the oddratio_id for each sample
+## This is made so that these lists could be used to name the columns of the resulting matrix
 pval_id = [id + '_pval' for id in id_column.unique()]
 oddratio_id = [id + '_or' for id in id_column.unique()]
 
+########################################################################################
+## The code below basically try to set up a contingency table to perform the fisher test
+## The contingency table needs 4 numbers, thus the LEN() function appears 4 times below
+## After the 4 len() functions are called, the contigency table is done and the fisher test get called
+########################################################################################
 
 
+## Create an empty dataframe to store the results
 short_variant_GO = pd.DataFrame(0, index=u_list_GO, columns = list(sum(zip(pval_id,oddratio_id),())))
+
+## Get the number of genes in the human
 gene_in_human = len(human_GO['SYMBOL'].unique())
 sample_index = 0
+
 for sample in id_column:
     print(sample)
     sample_mutation_matrix = matrix_temp.loc[matrix_temp[str(sample)] != 0]
@@ -100,16 +111,23 @@ for sample in id_column:
         term_index += 1
         print(term_index)
         go_term_gene = (go_gene_table.loc[go_gene_table['GO'] == go_term])['gene'].iloc[0]
+        ## Getting the last two entries for the contingency table
         gene_in_GO_human = len(go_term_gene)
         gene_in_GO_sample = len(set(u_sample_gene_assoc).intersection(set(go_term_gene)))
+        ##CAlling the fisher test
         short_variant_GO.loc[[go_term],[sample + '_or']], short_variant_GO.loc[[go_term],[sample + '_pval']] = stats.fisher_exact([[gene_in_GO_human, gene_in_human], [gene_in_GO_sample, gene_in_sample]])
         
+## Put together the column names
 new_list = list(sum(zip(pval_id,oddratio_id),()))
+
+##Name the columns
 short_variant_GO.columns = new_list
+
+## Merge to annotate the results with the GO functions
 short_variant_GO_merged = short_variant_GO.merge(go_def,left_index=True,right_on='GO')
 
 ## Make connection to the SQLite3 DataBase
-#conn = sqlite3.connect(args.database)
+
 conn = sqlite3.connect(args.database)
 
 ## Insert the computed dataframe as a table in the sqlite3 database

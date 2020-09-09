@@ -5,21 +5,18 @@ configfile : "config.yaml"
 #WES pipeline for going from variant file
 
 
-# ALL_FILES = expand("data/interim/{sample}_gene2gene_res.txt", sample=config["samples"])
-ALL_GO = expand("data/endpoints/{sample}_homepage.html", sample=config["samples"])
-# ALL_MP = expand("data/interim/{sample}_MP_term_res.txt", sample=config["samples"])
-# ALL_AFFY_GENES = expand("data/interim/{sample}_Affy_gene2gene_res.txt", sample=config["samples"])
-# ALL_AFFY_GO = expand("data/interim/{sample}_Affy_GO_term_res.txt", sample=config["samples"])
-# ALL_AFFY_MP = expand("data/interim/{sample}_Affy_MP_term_res.txt", sample=config["samples"])
-#ALL_REPORT = expand("data/endpoints/{sample}_homepage.html", sample=config["samples"])
-#ALL_TEST = expand("data/interim/{sample}_WES_mutation_matrix.txt", sample=config["samples"])
+#Specify the final file that we desire to get, which is the homepage.html file
+ALL_WEB = expand("data/endpoints/{sample}_homepage.html", sample=config["samples"])
 
 
+# First rule in the Snakefile. This will get executed and call for the WEBPAGE to be created. 
+# Any rules that are required to be executed to produce the WEBPAGE will be executed. 
 rule all:
 	input:
-		ALL_GO
+		ALL_WEB
 
 
+## First rule in the pipeline. Decompose the VCF file to standardize the format of it
 rule decomp:
 	input:
 		str(config["vcf_path"]) + "{sample}" + str(config["vcf_ext"]),
@@ -32,7 +29,7 @@ rule decomp:
 		"vt decompose {input} -o {output}"
 		
 
-
+## Normalize to standardize the format of the VCF file
 rule normalizem:
 	input:
 		decomp = "data/interim/{sample}.vcfdecom.vcf",
@@ -46,6 +43,7 @@ rule normalizem:
 		"vt normalize {input.decomp} -o {output} -r {input.fa}"
 		
 
+## Adding annotation to each of the VCF calls (aka, commenting each entry/row of the VCf file)
 rule annotation1:
 	input:
 		lua = lambda wildcards: config["lua"],
@@ -59,7 +57,7 @@ rule annotation1:
 	shell:
 		"vcfanno -p 12 -lua {input.lua} {input.tempanno} {input.norm} > {output}"
 
-
+## More annotation
 rule annotation2:
 	input:
 		temp2anno = str(config["temppath"]) + "temp2.anno",
@@ -72,6 +70,7 @@ rule annotation2:
 	shell:
 		"vcfanno -p 12 {input.temp2anno} {input.anno1} > {output}"
 
+## More annotation
 rule annotation3:
 	input:
 		temp3anno = str(config["temppath"]) + "temp3.anno",
@@ -97,7 +96,7 @@ rule snpeff:
 	shell:
 		"java -Xmx2g -jar /opt/anaconda3/envs/snakemake/share/snpeff-4.3.1t-3/snpEff.jar -v hg19kg {input.anno3} > {output}"
 
-
+#Classifying the results into different categories. No information are chagned here. Only transformed. 
 rule filter_results:
 	input:
 		gvcf = "data/interim/{sample}.vcf.anno.g.vcf",
@@ -110,10 +109,10 @@ rule filter_results:
 	shell:
 		"python3 {input.script} {input.gvcf} > {output.gatk_DP_AD}"
 
+
+## Uses GATK to separate the SNPS and INDELS
 rule getSNPs:
 	input:
-		#gatk_DP_AD = "data/interim/{sample}.vcf.anno.g.vcf",
-		#gatk_DP_AD = "data/interim/gatk_filtered_DP_AD.vcf",
 		gatk_DP_AD = "data/interim/gatk_filtered_DP_AD_{sample}.vcf",
 		fa=lambda wildcards: config["references"],
 	output:
@@ -127,6 +126,8 @@ rule getSNPs:
 		"gatk SelectVariants -R {input.fa} -V {input.gatk_DP_AD} -select-type INDEL -O {output.indel_out}"
 
 
+## Filter out the SNPs and Indels according to the gatk conventions
+## the code below are NOT commented out, don't delete
 rule filterSNPs:
 	input:
 		raw_snps = "data/interim/gatk_filtered_DP_AD_{sample}_raw_snps.vcf",
@@ -150,34 +151,8 @@ rule filterSNPs:
 		"""--filter-expression "FS > 200.0" --filter-name "FS_larger_than_200" """
 		"""--filter-expression "ReadPosRankSum < -20.0" --filter-name "readposranksum_less_than_-20" """
 
-# rule filterPASS_exac:
-# 	input:
-# 		filtered_snps = "data/interim/gatk_filtered_DP_AD_{sample}_PASS_annotated_snps.vcf",
-# 		filtered_indels = "data/interim/gatk_filtered_DP_AD_{sample}_PASS_annotated_indels.vcf"
-# 	output:
-# 		fin_snps_fil = "data/interim/gatk_filtered_DP_AD_{sample}_snps_PASS_exac.vcf",
-# 		fin_indels_fil = "data/interim/gatk_filtered_DP_AD_{sample}_indels_PASS_exac.vcf"
-# 	threads: 1
-# 	params:
-# 		mem=r"4G"
-# 	shell:
-# 	# We first get all the lines with PASS
-# 	# then we take the header line that starts with #CHROM and any exac_ac_all <100,000
-# 		"""awk '$7~/PASS/||/^#CHROM/' {input.filtered_snps} """
-# 		"""| egrep '^#CHROM|exac_ac_all=[0-9]$|exac_ac_all=[0-9];"""
-# 		"""|exac_ac_all=[0-9][0-9]$|exac_ac_all=[0-9][0-9];"""
-# 		"""|exac_ac_all=[0-9][0-9][0-9]$|exac_ac_all=[0-9][0-9][0-9];"""
-# 		"""|exac_ac_all=[0-9][0-9][0-9][0-9]$|exac_ac_all=[0-9][0-9][0-9][0-9];"""
-# 		"""|exac_ac_all=[0-9][0-9][0-9][0-9][0-9]$|exac_ac_all=[0-9][0-9][0-9][0-9][0-9];' """
-# 		"""> {output.fin_snps_fil} && """
-# 		"""awk '$7~/PASS/||/^#CHROM/' {input.filtered_indels} """
-# 		"""| egrep '^#CHROM|exac_ac_all=[0-9]$|exac_ac_all=[0-9];"""
-# 		"""|exac_ac_all=[0-9][0-9]$|exac_ac_all=[0-9][0-9];"""
-# 		"""|exac_ac_all=[0-9][0-9][0-9]$|exac_ac_all=[0-9][0-9][0-9];"""
-# 		"""|exac_ac_all=[0-9][0-9][0-9][0-9]$|exac_ac_all=[0-9][0-9][0-9][0-9];"""
-# 		"""|exac_ac_all=[0-9][0-9][0-9][0-9][0-9]$|exac_ac_all=[0-9][0-9][0-9][0-9][0-9];' """
-# 		"""> {output.fin_indels_fil} """
 
+## Take in the SNPS and indels. Select for the ones what have PASS scores and those annotated with HIGH or MODERATE impacts. 
 rule gen_PASS_high_moderate:
 	input:
 		filtered_snps = "data/interim/gatk_filtered_DP_AD_{sample}_PASS_annotated_snps.vcf",
@@ -190,22 +165,6 @@ rule gen_PASS_high_moderate:
 	shell:
 		'''awk '$7~/PASS/||/^#CHROM/' {input.filtered_snps} | grep 'HIGH\|MODERATE\|^#CHROM' > {output.pass_high_moderate} && '''
 		'''awk '$7~/PASS/' {input.filtered_indels} | grep 'HIGH\|MODERATE' >> {output.pass_high_moderate}'''
-
-
-
-# rule gen_high_moderate:
-# 	input:
-# 		gatk_DP_AD = "data/interim/gatk_filtered_DP_AD_{sample}.vcf"
-# 		pass_high_moderate = "data/interim/gatk_filtered_DP_AD_{sample}_PASS_high_moderate.vcf"
-# 	output:
-# 		high_moderate = "data/interim/gatk_filtered_DP_AD_{sample}_high_moderate.vcf",
-# 		non_high_moderate = "data/interim/gatk_filtered_DP_AD_{sample}_non_high_moderate.vcf"
-# 	threads: 1
-# 	params:
-# 		mem=r"4G"
-# 	shell:
-# 		""" grep 'HIGH\|MODERATE\|^#CHROM' {input.gatk_DP_AD} > {output.high_moderate} && """
-# 		""" grep -v 'HIGH\|MODERATE\|^##' {input.gatk_DP_AD} > {output.non_high_moderate} """
 
 
 
@@ -228,7 +187,8 @@ rule gene_WES_mutation_matrix:
 		"python3 {input.script} --input {input.pass_high_moderate} --genelist {input.gene_list} --database {params.database} > {output.WES_mat}"
 
 
-
+## Taking in the VCF matrix that was put into the Database and comparing gene vs gene between the two cohort. 
+## Asking, is there a diff in THIS ONE SPECIFIC GENE in the Controls vs Cases cohort. 
 rule gene2gene_analysis:
 	input:
 		script = str(config["scripts"]) + "stat_test_LOF_gene_pval.py",
@@ -243,6 +203,7 @@ rule gene2gene_analysis:
 	shell:
 		"python3 {input.script} --database {params.database} > {output.gene2gene}"
 
+## This is the rule to compare GO term vs GO term. Comparing mutation in a certain GO term between the Controls vs Cases cohorts
 rule GO_term_analysis:
 	input:
 		script = str(config["scripts"]) + "stat_test_LOF_GO_term_pval.py",
@@ -259,6 +220,7 @@ rule GO_term_analysis:
 	shell:
 		"python3 {input.script} --database {params.database} --goterms {input.go_terms} --gofunctions {input.go_functions} > {output.go_res}"
 
+## This is the rule to compare MP term vs MP term. Comparing mutation in a certain MP term between the Controls vs Cases cohorts
 rule MP_term_analysis:
 	input:
 		script = str(config["scripts"]) + "stat_test_LOF_MP_term_pval.py",
@@ -276,7 +238,7 @@ rule MP_term_analysis:
 		"python3 {input.script} --database {params.database} --mpterms {input.mp_terms} --mpfunctions {input.mp_functions} > {output.mp_res}"
 
 
-
+## Given that the BED file is already in the database, this takes the BED file from the database to perfrom gene vs gene analysis
 rule affy_gene2gene_analysis:
 	input:
 		script = str(config["scripts"]) + "stat_test_LOF_Affy_gene_pval.py",
@@ -292,6 +254,8 @@ rule affy_gene2gene_analysis:
 	shell:
 		"python3 {input.script} --database {params.database} > {output.gene2gene}"
 
+
+## Performs GO term vs GO term analysis between the Controls vs Cases cohorts
 rule affy_GO_term_analysis:
 	input:
 		script = str(config["scripts"]) + "stat_test_LOF_Affy_GO_term_pval.py",
@@ -310,6 +274,7 @@ rule affy_GO_term_analysis:
 		"python3 {input.script} --database {params.database} --goterms {input.go_terms} --gofunctions {input.go_functions} > {output.go_res}"
 
 
+## Performs MP term vs MP term analysis between the Controls vs Cases cohorts
 rule affy_MP_term_analysis:
 	input:
 		script = str(config["scripts"]) + "stat_test_LOF_Affy_MP_term_pval.py",
@@ -329,7 +294,7 @@ rule affy_MP_term_analysis:
 
 
 
-
+## Performs MetaP fisher test that conbimes the pvals from the VCF (SNPs) results with the BED (CNVs) file results
 rule MetaP_Fisher:
 	input:
 		script = str(config["scripts"]) + "stat_test_LOF_MetaP_Fisher.py",
@@ -349,6 +314,11 @@ rule MetaP_Fisher:
 		"python3 {input.script} --database {params.database} > {output.fisher}"
 
 
+##############################################################################################################################
+######################################## THIS BEGINS THE ANALYSIS OF EACH INDIVIDUAL SAMPLES INDEPENDENTLY ###################
+##############################################################################################################################
+
+## Finding significant in GO term of SNPs 
 rule individual_metap_SNP_GO:
 	input:
 		script = str(config["scripts"]) + "Individual_metap_SNP_GO.py",
@@ -365,6 +335,7 @@ rule individual_metap_SNP_GO:
 		"python3 {input.script} --database {params.database} --goterms {input.go_terms} --gofunctions {input.go_functions} > {output.SNP_GO}"
 
 
+## Finding significant in MP term of SNPs 
 rule individual_metap_SNP_MP:
 	input:
 		script = str(config["scripts"]) + "Individual_metap_SNP_MP.py",
@@ -381,6 +352,7 @@ rule individual_metap_SNP_MP:
 		"python3 {input.script} --database {params.database} --mpterms {input.mp_terms} --mpfunctions {input.mp_functions} > {output.SNP_MP}"
 
 
+## Finding significant in GO term of CNVs 
 rule individual_metap_CNV_GO:
 	input:
 		script = str(config["scripts"]) + "Individual_metap_CNV_GO.py",
@@ -396,6 +368,7 @@ rule individual_metap_CNV_GO:
 		"python3 {input.script} --database {params.database} --goterms {input.go_terms} --gofunctions {input.go_functions} > {output.CNV_GO}"
 
 
+## Finding significant in MP term of CNVs 
 rule individual_metap_CNV_MP:
 	input:
 		script = str(config["scripts"]) + "Individual_metap_CNV_MP.py",
@@ -411,6 +384,8 @@ rule individual_metap_CNV_MP:
 		"python3 {input.script} --database {params.database} --mpterms {input.mp_terms} --mpfunctions {input.mp_functions} > {output.CNV_MP}"
 
 
+## With the cohort ANALYSIS and Individual ANALYSIS done. We have enough information to create the REPORT
+## So we gather all of the data from the DATABASE and produce the REPORT. 
 rule gen_REPORT:
 	input:
 		fisher = "data/interim/{sample}_MetaP_Fisher.txt",
@@ -428,75 +403,4 @@ rule gen_REPORT:
 		database = lambda wildcards: config["database"]
 	shell:
 		"python3 {input.script} --database {params.database} --project_summary {input.proj_sum} --homepage_path {output.out}"
-
-
-# "docker://fingerfen/vt_vcfanno_snpeff:latest"
-		# vt decompose -o /mnt/isilon/emanuel_lab/duongn/xhmm_370/gatk_run/bevCombind.vcfdecom.vcf /mnt/isilon/emanuel_lab/duongn/xhmm_370/gatk_run/bevCombind.vcf
-		# vt normalize -o /mnt/isilon/emanuel_lab/duongn/xhmm_370/gatk_run/bevCombind.vcf.decom_norm.vcf -r /mnt/isilon/dbhi_bfx/reference/human/g1k_v37/human_g1k_v37.fasta /mnt/isilon/emanuel_lab/duongn/xhmm_370/gatk_run/bevCombind.vcfdecom.vcf
-		# vcfanno -p 12 -lua ./rare_disease.lua temp.anno bevCombind.vcf.decom_norm.vcf > bevCombind.vcf.anno.vcf
-		# 
-		#"vcfanno -p 12 temp2.anno bevCombind.vcf.anno.vcf > bevCombind.vcf.anno2.vcf"
-		# vcfanno -p 12 temp3.anno bevCombind.vcf.anno2.vcf > bevCombind.vcf.anno3.vcf
-		# /mnt/isilon/emanuel_lab/Software/jdk1.8.0_121/bin/java -Xmx8g -jar /mnt/isilon/dbhi_bfx/xie/snpEff/snpEff.jar hg19kg /mnt/isilon/emanuel_lab/duongn/xhmm_370/gatk_run/bevCombind.vcf.anno3.vcf > /mnt/isilon/emanuel_lab/duongn/xhmm_370/gatk_run/bevCombind.vcf.anno.g.vcf
-		# /mnt/isilon/emanuel_lab/Software/jdk1.8.0_121/bin/java -jar /mnt/isilon/emanuel_lab/WGS/ws/GATK3.8/GenomeAnalysisTK.jar -T SelectVariants -R /mnt/isilon/dbhi_bfx/reference/human/g1k_v37/human_g1k_v37.fasta -V bevCombind.vcf.anno.g.vcf -selectType SNP -o raw_snps.vcf
-		# /mnt/isilon/emanuel_lab/Software/jdk1.8.0_121/bin/java -jar /mnt/isilon/emanuel_lab/WGS/ws/GATK3.8/GenomeAnalysisTK.jar -T VariantFiltration -R /mnt/isilon/dbhi_bfx/reference/human/g1k_v37/human_g1k_v37.fasta -V raw_snps.vcf --filterExpression "QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0" --filterName "my_snp_filter" -o filtered_snps.vcf
-		# /mnt/isilon/emanuel_lab/Software/jdk1.8.0_121/bin/java -jar /mnt/isilon/emanuel_lab/WGS/ws/GATK3.8/GenomeAnalysisTK.jar -T SelectVariants -R /mnt/isilon/dbhi_bfx/reference/human/g1k_v37/human_g1k_v37.fasta -V bevCombind.vcf.anno.g.vcf -selectType INDEL -o raw_indels.vcf
-		# /mnt/isilon/emanuel_lab/Software/jdk1.8.0_121/bin/java -jar /mnt/isilon/emanuel_lab/WGS/ws/GATK3.8/GenomeAnalysisTK.jar -T VariantFiltration -R /mnt/isilon/dbhi_bfx/reference/human/g1k_v37/human_g1k_v37.fasta -V raw_indels.vcf --filterExpression "QD < 2.0 || FS > 200.0 || ReadPosRankSum < -20.0" --filterName "my_indel_filter" -o filtered_indels.vcf
-
-
-# rule filter_snp_indels_high_moderate:
-# 	input:
-# 	output:
-# 	threads: 1
-# 	params:
-# 		mem=r"4G"
-# 	shell:
-# 		awk filter snp
-# 		awk filter indels
-# 		awk filter high_moderate
-# 		awk filter non_high_moderate
-
-
-
-# rule filter_all_5_files:
-# 	input:
-# 		script = "filter_combined_GATK.py"
-# 	output:
-# 	threads: 1
-# 	params:
-# 		mem=r"4G"
-# 	shell:
-
-
-# rule stat_test_big_file:
-# 	input:
-# 		script = "stat_test_no_filter_072519.py"
-# 	output:
-# 	threads: 1
-# 	params:
-# 		mem=r"4G"
-# 	shell:
-
-
-# rule stat_test_gene_group:
-# 	input:
-# 	output:
-# 	threads: 1
-# 	params:
-# 		mem=r"4G"
-# 	shell:
-
-
-
-# rule stat_test_functional_analysis:
-# 	input:
-# 	output:
-# 	threads: 1
-# 	params:
-# 		mem=r"4G"
-# 	shell:
-
-
-
-
 

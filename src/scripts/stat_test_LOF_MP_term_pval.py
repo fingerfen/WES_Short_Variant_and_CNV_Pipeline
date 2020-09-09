@@ -24,10 +24,11 @@ def read_vcf(path):
 
 
 ## Define arg parser to take in inputs
-parser = argparse.ArgumentParser(description="""Gene-Gene analysis: This script
-                                                performs the gene to gene analysis
-                                                by taking a look at mutations called
-                                                in each gene and compare the 
+parser = argparse.ArgumentParser(description="""MP term analysis: This script
+                                                performs the GO term analysis
+                                                by taking a look at mutations 
+                                                called for each MP term and 
+                                                compare them between the
                                                 Experimental vs Control groups""") 
 
 parser.add_argument('--database', required=True,

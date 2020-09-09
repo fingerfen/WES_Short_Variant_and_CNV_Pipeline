@@ -20,6 +20,11 @@ parser.add_argument('--homepage_path', required=True,
 
 args = parser.parse_args()
 
+
+###################################################################################
+############################## Defining Functions #################################
+###################################################################################
+
 ##Define a function to read in table query and turn it into HTML code
 def get_html_table(sql_command_str, db_name):    
     import apsw
@@ -32,7 +37,7 @@ def get_html_table(sql_command_str, db_name):
     shell.process_sql(str(sql_command_str))
     return (output.getvalue())
 
-
+## Define a function that create html linked entries in a datatable
 def get_html_linked_table(sql_command_str,db_name):
     conn = sqlite3.connect(db_name)
     c = conn.cursor()
@@ -266,17 +271,25 @@ def get_html_subpage(sample,db_name,path_to_index):
     return n
 
 
-## BEGINNING OF SCRIPT
+
+###################################################################################
+############################## BEGINNING OF SCRIPT ################################
+###################################################################################
+
+
 
 ## Check if path exists, if not, create it. Hypothetically, the "data/endpoints/index" folder should already exist
 ## because the pipeline comes with the endpoints/index folder
 
-
+## This should be the default location. 
 path_for_index_file = "data/endpoints/index"
 
+
+#Check to see if this path exists, if not, make it and its parent directories
 Path(path_for_index_file).mkdir(parents=True, exist_ok=True)
 
 
+## Defind the beginning of the HTML file.
 head = '''<!doctype html>
 <html lang="en">
 <head>
@@ -583,10 +596,17 @@ a.article:hover {
     <h2>Project Summaries</h2>
       <p> '''
 
+
+## Read the summary in the input
 summary = open(args.project_summary, "r").read()
 
+
+## Add into the HEAD variable
+## Add the project summary.
 head += summary
 
+
+##continue to add information to HEAD after the summary was added
 head += '''      </p>
   </div>
 </div>
@@ -607,8 +627,13 @@ head += '''      </p>
   </thead>
   <tbody align=center >'''
 
+
+## Call on the "get_html_linked_table" function to make a table out of the Database
+## This table is special because it has links in it. Linking entries to another webpage
 head += get_html_linked_table('select * from id_table', args.database)
 
+
+## Add onto the HEAD variable after the table above was made
 head += '''</tbody>
 </table>
 </div>
@@ -636,8 +661,10 @@ head += '''</tbody>
   </thead>
   <tbody align=center>'''
 
+#Make an NORMAL, no links, table and add it to the file
 head += get_html_table('SELECT * FROM short_variant_gene2gene WHERE ratio>1 AND pval<0.05', args.database)
 
+## Add more to the HEAD variable
 head += '''  </tbody>
 </table>
 </div>
@@ -662,8 +689,11 @@ head += '''  </tbody>
   </thead>
   <tbody align=center>'''
 
+#Make another NORMAL table
 head += get_html_table('SELECT "GO","pval","stat","yes_count","no_count","ratio","name" FROM short_variant_GO WHERE ratio>1 AND pval<0.05', args.database)
 
+
+## Add onto the head
 head += '''  </tbody>
 </table>
 </div>
@@ -687,8 +717,12 @@ head += '''  </tbody>
   </thead>
   <tbody align=center>'''
 
+
+## Make table
 head += get_html_table('SELECT "MP","pval","stat","yes_count","no_count","ratio","name" FROM short_variant_MP WHERE ratio>1 AND pval<0.05', args.database)
 
+
+## Contionue to add more into the HEAD variable
 head += '''  </tbody>
 </table>
 </div>
@@ -723,8 +757,10 @@ head += '''  </tbody>
   </thead>
   <tbody align=center>'''
 
+#Add a NORMAL table
 head += get_html_table('SELECT * FROM CNV_gene2gene WHERE ratio>1 AND pval<0.05', args.database)
 
+#Add more to the HEAD variable
 head += '''  </tbody>
 </table>
 </div>
@@ -749,9 +785,11 @@ head += '''  </tbody>
   </thead>
   <tbody align=center>'''
 
-
+## Add another NORMAL table
 head += get_html_table('SELECT "GO","pval","stat","yes_count","no_count","ratio","name" FROM CNV_GO WHERE ratio>1 AND pval<0.05', args.database)
 
+
+## Continue to add onto the HEAD variable
 head += '''  </tbody>
 </table>
 </div>
@@ -776,8 +814,10 @@ head += '''  </tbody>
   </thead>
   <tbody align=center>'''
 
+## Add another NORMAL table
 head += get_html_table('SELECT "MP","pval","stat","yes_count","no_count","ratio","name" FROM CNV_MP WHERE ratio>1 AND pval<0.05', args.database)
 
+## Continue to add onto the HEAD variable
 head += '''  </tbody>
 </table>
 </div>
@@ -809,10 +849,11 @@ head += '''  </tbody>
   </thead>
   <tbody align=center>'''
 
-
+## Add another table
 head += get_html_table('SELECT "gene","pval_x","stat_x","yes_count_x","no_count_x","ratio_x" FROM MetaP_gene2gene  WHERE ratio_x>1 AND ratio_y>1 AND combined_pval<0.05', args.database)
 
 
+## Add more to the HEAD variable
 head += ''' </tbody>
 </table>
 </div>
@@ -837,8 +878,10 @@ head += ''' </tbody>
   <tbody align=center>'''
 
 
+## Add another NORMAL table
 head += get_html_table('SELECT "GO","pval_x","stat_x","yes_count_x","no_count_x","ratio_x","name_x" FROM MetaP_GO WHERE ratio_x>1 AND ratio_y>1 AND combined_pval<0.05', args.database)
 
+## Add to the HEAD variable
 head += '''  </tbody>
 </table>
 </div>
@@ -864,8 +907,11 @@ head += '''  </tbody>
   </thead>
   <tbody align=center>'''
 
+## Add another NORMAL table
 head += get_html_table('SELECT "MP","pval_x","stat_x","yes_count_x","no_count_x","ratio_x","name_x" FROM MetaP_MP WHERE ratio_x>1 AND ratio_y>1 AND combined_pval<0.05', args.database)
 
+
+## Finally, last bit of the HEAD variable
 head += '''  </tbody>
 </table>
 </div>
@@ -877,12 +923,22 @@ head += '''  </tbody>
 </body>
 </html>'''
 
+##########################################################################################
+######################## Printing out the main HOMEPAGE.HTML #############################
+##########################################################################################
 
-##Print out the homepage
+
+##Print out the homepage, write it to a file
 homepage_file = open(args.homepage_path, "w")
 n = homepage_file.write(head)
 homepage_file.close()
 
+
+
+
+##########################################################################################
+####### Printing out the main individual sample pages, each same gets a page #############
+##########################################################################################
 
 ##Connect to the database to pull out the sample
 conn = sqlite3.connect(args.database)
@@ -891,7 +947,6 @@ conn = sqlite3.connect(args.database)
 id_table = pd.read_sql_query("SELECT * from id_table", conn)
 
 #Make a copy of the gene column
-
 conn.close()
 
 ##For every ID in the ID table, generate a suub html page for it. 

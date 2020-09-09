@@ -6,7 +6,9 @@ import sys
 import argparse
 
 ## Define arg parser to take in inputs
-parser = argparse.ArgumentParser(description="""This script performs MetaP fisher test for Affy and WES data""") 
+parser = argparse.ArgumentParser(description="""This script performs MetaP fisher test to 
+												combine pvalues for BED file (CNVs data) 
+												and VCF file (SNPs data)""") 
 
 parser.add_argument('--database', required=True,
                     help='path to the sqlite3 database file that holds the sample names of the two cohorts')
